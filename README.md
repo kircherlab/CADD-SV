@@ -1,8 +1,8 @@
-#CADD-SV is a scoring tool for structural variants that uses SVs that survived millions of years of purifying selection to train a linear model using multiple features (see below) to estimate the effect of novel SVs.
+# CADD-SV is a scoring tool for structural variants that uses SVs that survived millions of years of purifying selection to train a linear model using multiple features (see below) to estimate the effect of novel SVs.
 
-##philip.kleinert@bihealth.de
+## philip.kleinert@bihealth.de
 
-#annotations
+# annotations
 
 CADD 
 https://krishna.gs.washington.edu/download/CADD/bigWig/
