@@ -55,5 +55,11 @@ http://mendel.stanford.edu/SidowLab/downloads/gerp/
 conserved coding regions (CCR)
 https://www.nature.com/articles/s41588-018-0294-6?WT.feed_name=subjects_population-genetics
 
+DDD Happloinsufficiency
+https://decipher.sanger.ac.uk/files/downloads/HI_Predictions_Version3.bed.gz
+
+Fantom5 enhancers
+https://zenodo.org/record/556775#.Xkz3G0oo-70
+
 
 
