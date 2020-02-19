@@ -61,5 +61,6 @@ https://decipher.sanger.ac.uk/files/downloads/HI_Predictions_Version3.bed.gz
 Fantom5 enhancers
 https://zenodo.org/record/556775#.Xkz3G0oo-70
 
-
+deepc saliencies score
+http://userweb.molbiol.ox.ac.uk/public/rschwess/container_for_ucsc/data/deepC/saliency_scores/saliencies_merged_gm12878_5kb.bw
 
