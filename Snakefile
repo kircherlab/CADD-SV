@@ -352,7 +352,7 @@ rule scoring:
   conda: "envs/SV.yml"
   output: "{sets}/score.bed"
   shell:  """
-    cp {input} {output}
+    Rscript --vanilla  ../scripts/scoring.R {input} {output}
     """
     
     
