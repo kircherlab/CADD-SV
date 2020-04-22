@@ -2,7 +2,8 @@
 # Annotation script for feature retrieval 
 # CADD-SV
 
-SETS=["benigndel","sim_cdel","sim_cdel1","sim_cdel2","sim_cdel3","sim_cdel4","sim_cdel5","sim_cdel6","sim_cdel7","sim_cdel8","sim_cdel9","pathodel","cdel"] #"DDD4","DDD3","sim_cdel1","sim_cdel2","sim_cdel3","sim_cdel4","sim_cdel5","sim_cdel6","sim_cdel7","sim_cdel8","sim_cdel9","cdel","sim_cdel","hins","benigndel","pathodel_smaller1mb","hdel500","cins500","sim_cdel","sim_hins","sim_cins500","sim_hdel500","pathodel_smaller1mb_downstream","pathodel_smaller1mb_upstream","gnomad-sv_DEL_1","gnomad-sv_DEL_1_upstream","gnomad-sv_DEL_1_downstream","benigndel_upstream","benigndel_downstream","test","pathoins500","benignins500","pathodup_smaller1mb","benigndup_smaller50kb"]    #"gnomad-sv_DEL","benigndel","sim_cdel","cdel","pathodel","gnomad-sv_DEL_1", ,"hins","hdel","sim_cins","sim_hdel","cins","cdel","sim_hins","benigndel","pathodel","gnomad-sv_DEL_1"
+SETS=["named-bed-file"]
+
 
 CELLS=["A549","Caki2"]
 TAD=["nested","tad"]
