@@ -1,6 +1,8 @@
 # CADD-SV 
-Cadd-SV is a scoring tool for structural variants that uses SVs that survived millions of years of purifying selection to train a linear model using multiple features (see below) to estimate the effect of novel SVs.
 
+## CADD-SV – a framework to score the effect of structural variants 
+
+Here we describe CADD-SV, a method to retrieve a wide set of annotations in the range and vicinity of a SV. Our tool computes summary statistics and uses a trained linear model to differentiate deleterious from neutral variants. We use human and chimpanzee derived alleles as proxy-neutral and contrast them with matched simulated variants as proxy-pathogenic, an approach that has proven powerful in the interpretation of SNVs (CADD). We show that CADD-SV-scores correlate with known pathogenic variants in individual genomes and allelic diversity. The ability of this model to prioritize functionally relevant, pathogenic variants is unmatched by existing methods.
 philip.kleinert@bihealth.de
 
 It uses following annotations:
