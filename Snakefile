@@ -4,16 +4,13 @@
 
 SETS=["named-bed-file"]
 
-
+#annotation dependencies and identifiers
 CELLS=["A549","Caki2"]
 TAD=["nested","tad"]
-
 #set of encode datasets in annotation/
 ENCODES=["DNase-seq","H2AFZ","H3K27ac","H3K27me3","H3K36me3","H3K4me1","H3K4me2","H3K4me3","H3K79me2","H3K9ac","H3K9me3","H4K20me1","totalRNA-seq"] 
-
 #set of genomegitar datasets for HIC directionality index
 genomegitars=["GSM1055800_DI","GSM1055805_DI","GSM1081530_DI","GSM1267196_DI","GSM1267200_DI","GSM1294038_DI","GSM1294039_DI","GSM1551599_DI","GSM1551629_DI","GSM1608505_DI","GSM1718021_DI","GSM1906332_DI","GSM1906333_DI","GSM1906334_DI","GSM1909121_DI","GSM455133_DI","GSM862723_DI","GSM862724_DI","GSM927075_DI"]
-
 #Cell lines from Encode for HIC datasets  
 CL=["gm12878","msc","mes","imr90","h1"]
 
