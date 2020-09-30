@@ -2,15 +2,16 @@
 # Annotation script for feature retrieval 
 # CADD-SV
 
-SETS=["named-bed-file"]
-
-#annotation dependencies and identifiers
+SETS=["inputbed"]
 CELLS=["A549","Caki2"]
 TAD=["nested","tad"]
+
 #set of encode datasets in annotation/
 ENCODES=["DNase-seq","H2AFZ","H3K27ac","H3K27me3","H3K36me3","H3K4me1","H3K4me2","H3K4me3","H3K79me2","H3K9ac","H3K9me3","H4K20me1","totalRNA-seq"] 
+
 #set of genomegitar datasets for HIC directionality index
 genomegitars=["GSM1055800_DI","GSM1055805_DI","GSM1081530_DI","GSM1267196_DI","GSM1267200_DI","GSM1294038_DI","GSM1294039_DI","GSM1551599_DI","GSM1551629_DI","GSM1608505_DI","GSM1718021_DI","GSM1906332_DI","GSM1906333_DI","GSM1906334_DI","GSM1909121_DI","GSM455133_DI","GSM862723_DI","GSM862724_DI","GSM927075_DI"]
+
 #Cell lines from Encode for HIC datasets  
 CL=["gm12878","msc","mes","imr90","h1"]
 
@@ -28,6 +29,17 @@ rule CTCF:
   shell: """
     bedtools coverage -b {input.anno} -a {input.bed} > {output}
     """
+
+rule ultraconserved:
+  input:
+    bed="../beds/{set}.bed",
+    anno="../dependencies/ultraconserved/ultraconserved_hg38_muliz120M_sort.bed"
+  conda: "envs/SV.yml"
+  output: "{set}/{set}_ultraconserved.bed"
+  shell: """
+    bedtools coverage -b {input.anno} -a {input.bed} > {output}
+    """
+
 
 #gc content from ucsc
 rule GC:
@@ -64,15 +76,24 @@ rule gene_model:
   shell: """
     grep "exon" {input.anno} | bedtools coverage -b stdin -a {input.bed} |cut -f 1,2,3,5 |paste - <(grep "transcript" {input.anno} |bedtools coverage -b stdin -a {input.bed} |cut -f 5 ) |paste - <(grep "gene" {input.anno} | bedtools coverage -b stdin -a {input.bed} | cut -f 5)|paste - <(grep "start_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "stop_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5) |paste - <(grep "three_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "five_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "CDS" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 ) >> {output}   """
   
+rule gene_model_dist:
+  input:
+    bed="../beds/{set}_nochr.bed",
+    anno="../dependencies/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.bed"
+  conda: "envs/SV.yml"
+  output: "{set}/{set}_genemodel_dist.bed"
+  shell: """
+    grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}   """
+  
 # gene names necessary for PlI extraction
 rule gene_names:
   input:  
     bed="../beds/{set}_nochr.bed",
-    anno="{set}/gm_tmp.bed"
+    anno="../dependencies/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.GENES.bed"
   conda: "envs/SV.yml"
   output: "{set}/{set}_genenames.bed"
   shell: """
-    cut -f 1,2,3 {input.anno} | paste - <(cut -f 5 {input.anno} | tr ";" "\n" | grep -E 'gene_name' | cut -f 1 | tr " " "\t" | cut -f 3 ) | bedtools map -b stdin -a {input.bed} -c 4 -o distinct >{output}
+    bedtools map -b {input.anno} -a {input.bed} -c 4 -o distinct > {output}
     """
 
 #PLi
@@ -105,7 +126,12 @@ rule gerp:
     anno="../dependencies/gerp/gerp_score2_hg38_MAM.bg.gz"
   conda: "envs/SV.yml"
   output: "{set}/{set}_gerp_mean.bed"
-  shell:  "tabix {input.anno} -R {input.merg} | bedtools map -a {input.bed} -b stdin -c 4 -o max > {output}"
+  shell:  """
+        tabix {input.anno} -R {input.merg} | bedtools map -a {input.bed} -b stdin -c 4 -o max,sum > {output}
+      """
+
+#"(while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output} 
+  
 
 
 #enhancer promotor links
@@ -194,7 +220,7 @@ rule ccr:
   output: "{set}/{set}_ccr_mean.bed"
   shell:  """
     tabix {input.anno} -R {input.merg} | bedtools map -a {input.bed} \
-    -b stdin -c 4 -o mean > {output}
+    -b stdin -c 4 -o max > {output}
     """
 
 # directionality index of HIC data from genomegitar database  
@@ -260,7 +286,7 @@ rule encode:
     anno="../dependencies/encode/{encodes}/{encodes}_merged_90quant.bed.gz"
   conda: "envs/SV.yml"
   output: temp("{set}/{set}_encode_{encodes}_mean.bed")
-  shell:  "tabix {input.anno} -R {input.merg} | bedtools map -a {input.bed} -b stdin -c 4 -o mean > {output}"
+  shell:  "tabix {input.anno} -R {input.merg} | bedtools map -a {input.bed} -b stdin -c 4,4 -o max,sum > {output}"
 
 def mergeEncode(wc):
   return(expand("{set}/{set}_encode_{encodes}_mean.bed",set=wc.set,encodes=ENCODES))
@@ -296,7 +322,7 @@ rule Fantom5_counts:
 rule HI:
   input:
     bed="../beds/{set}.bed",
-    anno="../dependencies/DDD_HI/HI_Predictions_Version3_sort.bed"
+    anno="../dependencies/DDD_HI/hg38_HI_Predictions_version3_sort.bed"
   conda: "envs/SV.yml"
   output: "{set}/{set}_dddhi.bed"
   shell: """
@@ -338,11 +364,13 @@ rule complete_script:
     remapTF="{set}/{set}_remapTF_mean.bed",
     f5="{set}/{set}_f5_counts.bed",
     hi="{set}/{set}_dddhi.bed",
-    deepc="{set}/{set}_deepc.bed"
+    deepc="{set}/{set}_deepc.bed",
+    ultrac="{set}/{set}_ultraconserved.bed",
+    genemodel_dist="{set}/{set}_genemodel_dist.bed"
   output:"{set}/matrix.bed"
   conda: "envs/SV.yml"
   shell:  """
-    paste <(cut -f1,2,3,4,5,6,7,8,9,10,11 {input.cadd}) <(cut -f4 {input.ccr}) <(cut -f4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25 {input.chromHMM}) <(cut -f4,5,6,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,8,12,16,20,24,28,32,36,40,44,48,52 {input.encode}) <(cut -f4,5,6,7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4,5,6,7,8,9,10,11 {input.gm}) <(cut -f4 {input.gerp}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4,5,6,7 {input.hesc}) <(cut -f4,5,6,7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli})  <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc})| cat ../dependencies/header.txt - > {output}
+    paste <(cut -f1-11 {input.cadd}) <(cut -f4 {input.ccr}) <(cut -f4-28 {input.chromHMM}) <(cut -f4,5,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) <(cut -f4-7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4-11 {input.gm}) <(cut -f4,5 {input.gerp}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4-7 {input.hesc}) <(cut -f4-7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli}) <(cut -f4,5,6 {input.genemodel_dist}) <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc}) <(cut -f4,5,7 {input.ultrac})| cat ../dependencies/header.txt - > {output}
     """
   
 rule scoring:
@@ -350,8 +378,9 @@ rule scoring:
   conda: "envs/SV.yml"
   output: "{sets}/score.bed"
   shell:  """
-    Rscript --vanilla  ../scripts/scoring.R {input} {output}
+    cp {input} {output}
     """
+    
     
     
     
