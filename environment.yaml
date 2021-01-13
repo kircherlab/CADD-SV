@@ -1,0 +1,7 @@
+name: run.caddsv
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - snakemake
