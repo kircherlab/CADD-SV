@@ -1,0 +1,8 @@
+{ "__default__" : 
+  {
+    "time" : "08:00",
+    "threads" : 8,
+    "mem" : "64000",
+    "queue" : "medium"
+  }
+}
