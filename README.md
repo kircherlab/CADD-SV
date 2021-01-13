@@ -29,9 +29,11 @@ We will now initiate the Conda environment, which we will need for getting the S
 conda env create -n run.caddsv --file environment.yaml
 ```
 
+The conda environment (`envs/SV.yml`) containing all packages and tools to make CADD-SV run will be installed automatically during the first run only. This can take some time.
+
 ### Annotations
 
-We use various annotations to feed CADD-SV with its necessary input features. CADD-SV automatically retrieves and transforms these annotations (see Snakefile) and combines them in bed-format at /desired-sv-set/matrix.bed
+CADD-SV depends on various annotations to provide the model with its necessary input features. CADD-SV automatically retrieves and transforms these annotations (see Snakefile) and combines them in bed-format at `/desired-sv-set/matrix.bed`
 
 Annotations can be downloaded and expanded individually. However, to run CADD-SV as desired and to minimize runtime and memory failures use the annotation sets as stored at XXXXXXXXXX.
 
