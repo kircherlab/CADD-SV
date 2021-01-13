@@ -51,9 +51,10 @@ caddsv=function(x){
   return(y)
   }
 
+##############################################################################################################
 
 load("model.RData")
-set1=caddsv(args[1])
+set1=caddsv(args[1]) #read annotation file
 
 f=dim(set1)[2] #features -3
 
@@ -61,7 +62,25 @@ predict1.cdel=predict(cdel.model,set1[[1]][,4:f])
 predict2.hdel=predict(hdel.model,set1[[2]][,4:f])
 pred=apply(cbind(predict1.cdel,predict2.hdel),1,min)
 
-write.table(cbind(set1[,1:3],pred),args[2],sep="\t",
+##############################################################################################################
+
+ranker=function(x,gnomad) {
+  k=x
+  for(i in 1:length(k))
+  {
+    k[i]=length(which(gnomad<x[i]))/length(gnomad)
+  }
+  return(k)
+}
+
+rank.set1=ranker(pred,gnomad) #within gnomad scores
+perc.rank <- function(x) trunc(rank(x))/length(x)
+
+score=perc.rank(rank.set1)
+
+##############################################################################################################
+
+write.table(cbind(set1[,1:3],score),args[2],sep="\t",
             row.names = F, 
             col.names = F, 
             quote = F)
