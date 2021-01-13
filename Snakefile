@@ -2,25 +2,9 @@
 # Annotation script for feature retrieval 
 # CADD-SV
 
-SETS=["sim_cins"]
+SETS=["to-be-scored-SVset"]
   
   
-  
-  #sim_cdel2,cdel,hdel2
-  #"causal_del","1000G_DEL","gnomad_DEL","sim_cdel2"]
-#["sim_hins10kb","sim_cins10kb","gnomad_DUP10kb","pathodup10kb","cancer_DUP10kb","1000G_DUP10kb"]
-      #["gnomad_INS10kb","pathoins10kb","cancer_INS10kb","1000G_INS10kb","cins10kb","hins10kb"]
-#
-  
-  #"cdel","sim_cdel2","hins","sim_hins","sim_cins500","cins500","hdel500","sim_hdel500","causal_del"]
-
-#pathodel
-#gnomad_DEL
-#icgc
-#pathoins
-#gnomad_ins
-
-#"gnomad_ins100s","causal_dup","cdel","HALL_DUP","HALL_DEL","benigndup_smaller1mb","pathodup_smaller1mb","gnomad_DEL","icgc","benigndel","pathodel"#, 
  
 CELLS=["A549","Caki2"]
 TAD=["nested","tad"]
