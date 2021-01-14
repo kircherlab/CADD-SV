@@ -45,21 +45,22 @@ These annotations include:
 
 ##### Integrated Scores
 CADD (https://krishna.gs.washington.edu/download/CADD/bigWig/) \
-LINSIGHT (compgen.cshl.edu/LINSIGHT/LINSIGHT.bw) \
+LINSIGHT (compgen.cshl.edu/LINSIGHT/LINSIGHT.bw) 
 
 ##### Species conservation and constraint metrics
 PhastCons (http://hgdownload.cse.ucsc.edu/goldenpath/hg38/) \
 Syntenic regions (http://webclu.bio.wzw.tum.de/cgi-bin/syntenymapper/get-species-list.py) \
-gerp score (http://mendel.stanford.edu/SidowLab/downloads/gerp/) \
+gerp score (http://mendel.stanford.edu/SidowLab/downloads/gerp/) 
 
 ##### Population and disease constraint metrics
 Pli score (ftp://ftp.broadinstitute.org/pub/ExAC_release/release1/manuscript_data/forweb_cleaned_exac_r03_march16_z_data_pLI.txt.gz) \
 conserved coding regions (CCR) (https://www.nature.com/articles/s41588-018-0294-6?WT.feed_name=subjects_population-genetics) \
-DDD Happloinsufficiency (https://decipher.sanger.ac.uk/files/downloads/HI_Predictions_Version3.bed.gz) \
+DDD Happloinsufficiency (https://decipher.sanger.ac.uk/files/downloads/HI_Predictions_Version3.bed.gz) 
 
 ##### Epigenetic and regulatory activity
+Encode Features such as Histon Modifications and DNase and RNase-seq (https://www.encodeproject.org/help/batch-download/) \
 GC content (http://hgdownload.cse.ucsc.edu/gbdb/hg38/bbi/gc5BaseBw/gc5Base.bw) \
-chromhmm states of encode celllines (http://compbio.mit.edu/ChromHMM/) \
+chromhmm states of encode celllines (http://compbio.mit.edu/ChromHMM/) 
 
 ##### 3D genome organization
 CTCF (http://genome.cshlp.org/content/suppl/2012/08/28/22.9.1680.DC1/Table_S2_Location_of_ChIP-seq_binding_positions_in_19_cell_lines.txt) \
@@ -67,11 +68,11 @@ Encode-HIC data (https://www.encodeproject.org/search/?type=Experiment&assay_ter
 enhancer-promoter-links from FOCS (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5930446/) \
 FIREs frequently interacting regulatory elements (https://www.sciencedirect.com/science/article/pii/S2211124716314814) \
 Directionality index for HIC data from various datasets (https://www.genomegitar.org/processed-data.html) \
-deepc saliencies score (http://userweb.molbiol.ox.ac.uk/public/rschwess/container_for_ucsc/data/deepC/saliency_scores/saliencies_merged_gm12878_5kb.bw) \
+deepc saliencies score (http://userweb.molbiol.ox.ac.uk/public/rschwess/container_for_ucsc/data/deepC/saliency_scores/saliencies_merged_gm12878_5kb.bw) 
 
 ##### Gene and element annotations
 ensembl-gff3 genebuild (ftp://ftp.ensembl.org/pub/release-96/gff3/homo_sapiens/Homo_sapiens.GRCh38.96.chr.gff3.gz) \
-Fantom5 enhancers (https://zenodo.org/record/556775#.Xkz3G0oo-70) \
+Fantom5 enhancers (https://zenodo.org/record/556775#.Xkz3G0oo-70) 
 
 
 
