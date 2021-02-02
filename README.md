@@ -38,7 +38,8 @@ CADD-SV depends on various annotations to provide the model with its necessary i
 Annotations can be downloaded and expanded individually. However, to run CADD-SV as desired and to minimize runtime and memory failures use the annotation sets as stored at XXXXXXXXXX.
 
 ```bash
-wget XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+wget https://kircherlab.bihealth.org/download/CADD-SV/dependencies.tar.gz
+tar -xf archive.tar.gz dependencies.tar.gz
 ```
 
 These annotations include:
