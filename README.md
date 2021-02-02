@@ -35,7 +35,7 @@ The conda environment (`envs/SV.yml`) containing all packages and tools to make 
 
 CADD-SV depends on various annotations to provide the model with its necessary input features. CADD-SV automatically retrieves and transforms these annotations (see Snakefile) and combines them in bed-format at `/desired-sv-set/matrix.bed`
 
-Annotations can be downloaded and expanded individually. However, to run CADD-SV as desired and to minimize runtime and memory failures use the annotation sets as stored at XXXXXXXXXX.
+Annotations can be downloaded and expanded individually. However, to run CADD-SV as desired and to minimize runtime and memory failures use the annotation sets as stored at https://kircherlab.bihealth.org/download/CADD-SV/
 
 ```bash
 wget https://kircherlab.bihealth.org/download/CADD-SV/dependencies.tar.gz
