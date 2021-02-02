@@ -4,8 +4,7 @@
 
 SETS=["to-be-scored-SVset"]
   
-  
- 
+
 CELLS=["A549","Caki2"]
 TAD=["nested","tad"]
 
@@ -18,11 +17,17 @@ genomegitars=["GSM1055800_DI","GSM1055805_DI","GSM1081530_DI","GSM1267196_DI","G
 #Cell lines from Encode for HIC datasets  
 CL=["gm12878","msc","mes","imr90","h1"]
 
-
 rule all:
   input:
     matrix=expand("{sets}/score.bed",sets=SETS)
 
+rule create_ID:
+  input:expand("../beds/{set}_id.bed",set=SETS)
+  output: "../beds/{set}.bed"
+  shell: """
+     cut -f1,2,3 {input} > {output}
+    """
+    
 rule prep_chr:
   input:expand("../beds/{set}.bed",set=SETS)
   conda: "envs/SV.yml"
