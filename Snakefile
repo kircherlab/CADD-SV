@@ -20,7 +20,7 @@ CL=["gm12878","msc","mes","imr90","h1"]
 rule all:
   input:
     matrix=expand("{sets}/score.bed",sets=SETS)
-
+    
 rule create_ID:
   input:expand("../beds/{set}_id.bed",set=SETS)
   output: "../beds/{set}.bed"
