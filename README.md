@@ -83,11 +83,16 @@ Almost ready to go. After you prepared the files above, you may need to adjust l
 
 - CADD-SV scores SV in bedformat on the GRCh38 genomebuild. The type of SV needs tobe contained in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files.
 
-  If you want to score SVs in a VCF format apply following steps:
+  If you want to score SVs in a VCF format or your SVs are not in GRCh38 genomebuild coordinates:
+  We provide a environment to handle this.
   
+  ```bash
+  conda env create -n prepBED --file envs/prepBED.yml
   ```
   
-  conda activate envs/prepBED
+  To convert your VCF into BED format run:
+  ```
+  conda activate prepBED
   SURVIVOR vcftobed input.vcf 0 -1 output.bed
   cut -f1,2,6,11 output.bed > beds/set_id.bed
   
@@ -96,8 +101,7 @@ Almost ready to go. After you prepared the files above, you may need to adjust l
   To lift hg19 coordinates to GRCh38 apply following steps:
   
   ```
-  
-  conda activate envs/liftover_VCF.yml
+  conda activate prepBED
   liftOver beds/setname_hg19_id.bed /dependencies/hg19ToHg38.over.chain.gz beds/setname_id.bed beds/setname_unlifted.bed
   ```
    
