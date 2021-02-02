@@ -75,15 +75,32 @@ ensembl-gff3 genebuild (ftp://ftp.ensembl.org/pub/release-96/gff3/homo_sapiens/H
 Fantom5 enhancers (https://zenodo.org/record/556775#.Xkz3G0oo-70) 
 
 
-
-
 ## Config
 
 Almost ready to go. After you prepared the files above, you may need to adjust locations and names of these files in the `config.yml`. 
 
 ## List of required input files
 
-- CADD-SV scores SV in bedformat containing the type of SV in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files.
+- CADD-SV scores SV in bedformat on the GRCh38 genomebuild. The type of SV needs tobe contained in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files.
+
+  If you want to score SVs in a VCF format apply following steps:
+  
+  '''
+  
+  conda activate envs/prepBED
+  SURVIVOR vcftobed input.vcf 0 -1 output.bed
+  cut -f1,2,6,11 output.bed > beds/set_id.bed
+  
+  '''
+  
+  To lift hg19 coordinates to GRCh38 apply following steps:
+  
+  '''
+  
+  conda activate envs/liftover_VCF.yml
+  liftOver beds/setname_hg19_id.bed /dependencies/hg19ToHg38.over.chain.gz beds/setname_id.bed beds/setname_unlifted.bed
+  '''
+   
 - Annotations in the /dependencies folder
 - Models and scripts as cloned from this GIT repository
 
