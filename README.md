@@ -85,21 +85,21 @@ Almost ready to go. After you prepared the files above, you may need to adjust l
 
   If you want to score SVs in a VCF format apply following steps:
   
-  '''
+  ```
   
   conda activate envs/prepBED
   SURVIVOR vcftobed input.vcf 0 -1 output.bed
   cut -f1,2,6,11 output.bed > beds/set_id.bed
   
-  '''
+  ```
   
   To lift hg19 coordinates to GRCh38 apply following steps:
   
-  '''
+  ```
   
   conda activate envs/liftover_VCF.yml
   liftOver beds/setname_hg19_id.bed /dependencies/hg19ToHg38.over.chain.gz beds/setname_id.bed beds/setname_unlifted.bed
-  '''
+  ```
    
 - Annotations in the /dependencies folder
 - Models and scripts as cloned from this GIT repository
