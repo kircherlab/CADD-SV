@@ -39,7 +39,7 @@ Annotations can be downloaded and expanded individually. However, to run CADD-SV
 
 ```bash
 wget https://kircherlab.bihealth.org/download/CADD-SV/dependencies.tar.gz
-tar -xf archive.tar.gz dependencies.tar.gz
+tar -xf dependencies.tar.gz
 ```
 
 These annotations include:
