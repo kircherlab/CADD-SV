@@ -17,22 +17,36 @@ cadd.sv.read=function(x,z){
   
   y[,1]=gsub('[chr\n]', '', y[,1])
   
-  for(i in 1:130){
+  for(i in 1:131){
     y[,i]=as.numeric(y[,i])
   }
   
   y[is.na(y)] <- 0
   y=apply(y,2, as.numeric)
   y[is.na(y)] <- 0
+  header=colnames(y)
+  y=data.frame(y)
   
   ylen=y[,3]-y[,2]
-  y[which(y[,43]>3000),44]=3000 #DNAse outliers
-  y[which(y[,126]>1),126]=1 #DDD outliers
-
-  for(i in c(73,98,102,106,110,114,118,121,122,123,5,7,9,11,42,43,45,47,49,51,53,55,57,59,61,63,65,67,69,131,85,86,87)){ #logs of distances and sums and counts
+  y$DNase.seq_max[which(y$DNase.seq_max>3000)]=3000 #DNAse outliers
+  y$DDD_HaploInsuf[which(y$DDD_HaploInsuf>1)]=1 #DDD outliers
+  
+  tolog=c("EP_distance","A549_nested_dist","A549_tad_dist"
+          ,"caki2_nested_dist","caki2_tad_dist","escTAD_distance"
+          ,"microsyn_distance","exon_dist","gene_dist"
+          ,"start_codon_dist","CADD_sum","CADD_count","gerp_count","PhastCons100_sum"
+          ,"PhastCons30_sum","PhastCons20_sum","DI_min"
+          ,"DI_max","DNase.seq_sum","H2AFZ_sum"
+          ,"H3K27ac_sum","H3K27me3_sum","H3k36me3_sum"
+          ,"H3K4me1_sum","H3K4me2_sum","H3K4me3_sum"
+          ,"H3K79me2_sum","H3K9ac_sum","H3K9me3_sum"
+          ,"H4k20me1_sum","totalRNA.seq_sum","LINSIGHT"
+          ,"exon","transcript","gene","x3utr","x5utr","cds","nr_uc_bases")
+  
+  for(k in tolog){ #logs of distances and sums and counts
+    i=which(header==k) 
     y[,i]=round(log10(abs(y[,i])+1),4)
   }
-  y=y[,-c(73,98,102,106,110,114,118)]
   
   return(y)
 }
@@ -51,6 +65,7 @@ caddsv=function(x){
   y[[2]]=k[[4]]
   return(y)
 }
+
 
 gnomad.scale=readRDS("/dependencies/2021scale.rds")
 gnomad.rank=readRDS("/dependencies/2021gnomadrank.RDS")
