@@ -64,14 +64,14 @@ caddsv=function(x){
 }
 
 
-gnomad.scale=readRDS("2021scale.RDS")
-gnomad.rank=readRDS("2021gnomadrank20k.RDS")
-gnomad.rank2=readRDS("2021gnomadrank20k_2.RDS")
+gnomad.scale=readRDS("models/2021scale.RDS")
+gnomad.rank=readRDS("models/2021gnomadrank20k.RDS")
+gnomad.rank2=readRDS("models/2021gnomadrank20k_2.RDS")
 
-cdel.model=readRDS("cdelmodelRF.RDS")
-hdel.model=readRDS("hdelmodelRF.RDS")
-cins.model=readRDS("cinsmodelRF.RDS")
-hins.model=readRDS("hinsmodelRF.RDS")
+cdel.model=readRDS("models/cdelmodelRF.RDS")
+hdel.model=readRDS("models/hdelmodelRF.RDS")
+cins.model=readRDS("models/cinsmodelRF.RDS")
+hins.model=readRDS("models/hinsmodelRF.RDS")
  #contains models and scaling parameters
 
 
