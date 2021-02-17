@@ -1,14 +1,11 @@
 #!/usr/bin/env Rscript
 
 #Scoring CADD-SV
-
+options(scipen = 999)
 
 args = commandArgs(trailingOnly=TRUE)
 
 name.caddsv=args[1]
-
-#######################################################################################################################
-#functions and loading models/scaling parameters of gnomad/ rank distribution of gnomad
 cadd.sv.read=function(x,z){
   
   y=as.matrix(read.table(paste(x,"/matrix",z,".bed",sep=""),header=T))
@@ -67,20 +64,21 @@ caddsv=function(x){
 }
 
 
-gnomad.scale=readRDS("/dependencies/2021scale.rds")
-gnomad.rank=readRDS("/dependencies/2021gnomadrank.RDS")
-cdel.model=readRDS("/dependencies/2021cdelmodel.rds")
-hdel.model=readRDS("/dependencies/2021hdelmodel.rds")
-cins.model=readRDS("/dependencies/2021cinsmodel.rds")
-hins.model=readRDS("/dependencies/2021hinsmodel.rds")
+gnomad.scale=readRDS("2021scale.RDS")
+gnomad.rank=readRDS("2021gnomadrank20k.RDS")
+gnomad.rank2=readRDS("2021gnomadrank20k_2.RDS")
+
+cdel.model=readRDS("cdelmodelRF.RDS")
+hdel.model=readRDS("hdelmodelRF.RDS")
+cins.model=readRDS("cinsmodelRF.RDS")
+hins.model=readRDS("hinsmodelRF.RDS")
  #contains models and scaling parameters
 
 
 tbs=caddsv(name.caddsv) #to be scored
 id=as.matrix(read.table(paste("../beds/",name.caddsv,"_id.bed",sep=""))) #DEL INS DUP identifyer
 
-#######################################################################################################################
-#splitting according to SV-type
+
 
 DEL=list()
 DEL[[1]]=as.matrix(tbs[[1]][which(id[,4]=="DEL"),])
@@ -92,7 +90,6 @@ DUP=list()
 DUP[[1]]=as.matrix(tbs[[1]][which(id[,4]=="DUP"),])
 DUP[[2]]=as.matrix(tbs[[2]][which(id[,4]=="DUP"),])
 
-#######################################################################################################################
 ##fixing single DUP DEL INS transformation bug
 if(dim(DEL[[1]])[2]==1){
 DEL[[1]]=t(DEL[[1]])
@@ -111,10 +108,9 @@ if(dim(DUP[[1]])[2]==1){
 dels=DEL
 inss=INS
 dups=DUP
-#######################################################################################################################
 #scaling according to gnomad healthy population distribution
 
-for(i in 4:124){
+for(i in 4:131){
      dels[[1]][,i]=scale(c(DEL[[1]][,i]),center=gnomad.scale[[1]][[i]][[2]],scale=gnomad.scale[[1]][[i]][[3]])
      dels[[2]][,i]=scale(c(DEL[[2]][,i]),center=gnomad.scale[[2]][[i]][[2]],scale=gnomad.scale[[2]][[i]][[3]])
      inss[[1]][,i]=scale(c(INS[[1]][,i]),center=gnomad.scale[[3]][[i]][[2]],scale=gnomad.scale[[3]][[i]][[3]])
@@ -124,18 +120,17 @@ for(i in 4:124){
      
 }
  
-#######################################################################################################################
 #scoring DEL INS and DUPs according to the appropriate model
 library(randomForest)
-del1=predict(cdel.model,dels[[1]][,4:124])
-del2=predict(hdel.model,dels[[2]][,4:124])
-ins1=predict(hins.model,inss[[1]][,4:124])
-ins2=predict(cins.model,inss[[2]][,4:124])
-dup1=predict(cdel.model,dups[[1]][,4:124])
-dup2=predict(cins.model,dups[[2]][,4:124])
+del1=predict(cdel.model,dels[[1]][,4:131])*(-1)
+del2=predict(hdel.model,dels[[2]][,4:131])*(-1)
+ins1=predict(hins.model,inss[[1]][,4:131])*(-1)
+ins2=predict(cins.model,inss[[2]][,4:131])*(-1)
+dup1=predict(cdel.model,dups[[1]][,4:131])*(-1)
+dup2=predict(hdel.model,dups[[2]][,4:131])*(-1)
 
 
-#######################################################################################################################
+
 #ranking according to gnomad healthy cohort distribution
 ranker=function(x,gnomad) {
   k=x
@@ -146,30 +141,58 @@ ranker=function(x,gnomad) {
   return(k)
 }
 
-rank.del1=ranker(del1,gnomad.rank[[1]])
-rank.del2=ranker(del2,gnomad.rank[[2]])
-rank.ins1=ranker(ins1,gnomad.rank[[3]])
-rank.ins2=ranker(ins2,gnomad.rank[[4]])
-rank.dup1=ranker(dup1,gnomad.rank[[5]])
-rank.dup2=ranker(dup2,gnomad.rank[[6]])
-#######################################################################################################################
-# weighing model scores
+rank.del1=ranker((-1)*del1,gnomad.rank[[1]])
+rank.del2=ranker((-1)*del2,gnomad.rank[[2]])
+rank.ins1=ranker((-1)*ins1,gnomad.rank[[3]])
+rank.ins2=ranker((-1)*ins2,gnomad.rank[[4]])
+rank.dup1=ranker((-1)*dup1,gnomad.rank[[5]])
+rank.dup2=ranker((-1)*dup2,gnomad.rank[[6]])
 
-del=apply(cbind(rank.del1,rank.del2),1,min)
-ins=apply(cbind(rank.ins1,rank.ins2),1,min)
-dup=apply(cbind(rank.dup1,rank.dup2),1,min)
 
-#######################################################################################################################
-#putting it back together
+del=apply(cbind(rank.del1,rank.del2),1,max)
+ins=apply(cbind(rank.ins1,rank.ins2),1,max)
+dup=apply(cbind(rank.dup1,rank.dup2),1,max)
+
+
+
+rank.del=ranker(del,gnomad.rank2[[1]])
+rank.ins=ranker(ins,gnomad.rank2[[2]])
+rank.dup=ranker(dup,gnomad.rank2[[3]])
+
+
+
+del=rank.del
+ins=rank.ins
+dup=rank.dup
+
+
 cadd=cbind(id,2)
-cadd[which(id[,4]=="DEL"),5]=del
-cadd[which(id[,4]=="DUP"),5]=dup
-cadd[which(id[,4]=="INS"),5]=ins
+cadd[which(id[,4]=="DEL"),5]=rank.del
+cadd[which(id[,4]=="DUP"),5]=rank.dup
+cadd[which(id[,4]=="INS"),5]=rank.ins
 
-#######################################################################################################################
-#output
 write.table(cadd,paste(name.caddsv,".score",sep=""),sep="\t",
             row.names = F, 
             col.names = T, 
             quote = F)
 
+
+d=cbind(dels[[1]][,1:3],"DEL",rank.del,del1,del2,dels[[1]][,4:131])
+inserts=cbind(inss[[1]][,1:3],"INS",rank.ins,ins1,ins2,inss[[1]][,4:131])
+dupli=cbind(dups[[1]][,1:3],"DUP",rank.dup,dup1,dup2,dups[[1]][,4:131])
+
+
+header=c(colnames(dels[[1]])[1:3],"type","CADDSV-score","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
+
+colnames(d)=header
+colnames(inserts)=header
+colnames(dupli)=header
+d[which(d[,1]==0),1]="X"
+inserts[which(inserts[,1]==0),1]="X"
+dupli[which(dupli[,1]==0),1]="X"
+
+
+write.table(rbind(d,inserts,dupli),paste(name.caddsv,".score",sep=""),sep="\t",
+            row.names = F, 
+            col.names = F, 
+            quote = F)
