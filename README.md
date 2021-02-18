@@ -43,7 +43,7 @@ tar -xf dependencies.tar.gz
 
 ## Config
 
-Almost ready to go. After you prepared the files above, you may need to adjust locations and names of these files in the `config.yml`. 
+Almost ready to go. After you prepared the files above, you may need to adjust the name of your dataset in the `config.yml`. 
 
 ## List of required input files
 
