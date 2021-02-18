@@ -2,8 +2,7 @@
 
 ## CADD-SV – a framework to score the effect of structural variants 
 
-Here we describe CADD-SV, a method to retrieve a wide set of annotations in the range and vicinity of a SV. Our tool computes summary statistics and uses a trained linear model to differentiate deleterious from neutral variants. We use human and chimpanzee derived alleles as proxy-neutral and contrast them with matched simulated variants as proxy-pathogenic, an approach that has proven powerful in the interpretation of SNVs (CADD). We show that CADD-SV-scores correlate with known pathogenic variants in individual genomes and allelic diversity. The ability of this model to prioritize functionally relevant, pathogenic variants is unmatched by existing methods.
-philip.kleinert@bihealth.de
+Here we describe CADD-SV, a method to retrieve a wide set of annotations in the range and vicinity of a SV. Our tool computes summary statistics and uses a trained linear model to differentiate deleterious from neutral variants. We use human and chimpanzee derived alleles as proxy-neutral and contrast them with matched simulated variants as proxy-pathogenic, an approach that has proven powerful in the interpretation of SNVs (CADD). We show that CADD-SV-scores correlate with known pathogenic variants in individual genomes and allelic diversity.
 
 
 ## Pre-requirements
@@ -48,7 +47,7 @@ Almost ready to go. After you prepared the files above, you may need to adjust l
 
 ## List of required input files
 
-- CADD-SV scores SV in bedformat on the GRCh38 genomebuild. The type of SV needs to be contained in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files. In example input file can be found at 'input/'. The file needs to have the suffix 'id_'. If you plan to run another genomebuild or SVs in VCF format, see below.
+- CADD-SV scores SV in bedformat on the GRCh38 genomebuild. The type of SV needs to be contained in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files. In example input file can be found at `input/`. The file needs to have the suffix `id_`. If you plan to run another genomebuild or SVs in VCF format, see below.
 - Annotations in the /annotations folder
 - Models and scripts as cloned from this GIT repository
 
@@ -68,7 +67,7 @@ snakemake  --use-conda --configfile config.yml
 
 ## Output files
 
-The pipeline outputs your SV set containing all annotations in bed format in a folder named 'output' containing the CADD-SV and Raw-scores in row 6-8.
+The pipeline outputs your SV set containing all annotations in bed format in a folder named `output` containing the CADD-SV and Raw-scores in row 6-8.
 Further information about individual annotations are kept in a subfolder named after your input dataset.
 
 
