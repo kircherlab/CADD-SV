@@ -6,8 +6,6 @@
 # # with --use-conda --use-singularity
 container: "docker://continuumio/miniconda3"
 
-SETS = ["test"]
-
 
 CELLS = ["A549", "Caki2"]
 TAD = ["nested", "tad"]
@@ -58,7 +56,7 @@ CL = ["gm12878", "msc", "mes", "imr90", "h1"]
 
 rule all:
     input:
-      matrix=expand("output/{sets}_score.bed", sets=SETS),
+      matrix=expand("output/{sets}_score.bed", sets=config["dataset"])
 
 
 rule prep_chr1:
