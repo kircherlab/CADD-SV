@@ -42,7 +42,42 @@ wget https://kircherlab.bihealth.org/download/CADD-SV/v1.0/dependencies.tar.gz
 tar -xf dependencies.tar.gz
 ```
 
-These annotations include:
+## Config
+
+Almost ready to go. After you prepared the files above, you may need to adjust locations and names of these files in the `config.yml`. 
+
+## List of required input files
+
+- CADD-SV scores SV in bedformat on the GRCh38 genomebuild. The type of SV needs to be contained in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files. In example input file can be found at 'input/'. The file needs to have the suffix 'id_'. If you plan to run another genomebuild or SVs in VCF format, see below.
+- Annotations in the /annotations folder
+- Models and scripts as cloned from this GIT repository
+
+
+## Run pipeline
+
+Ready to go! If you run the pipeline on a cluster see the `cluster.json` for an estimate of minimum requirements for the individual jobs. Note that this depends on your dataset size so you may have to adjust this.
+To start the pipeline:
+
+```bash
+conda activate run.caddsv
+# dry run to see if everything works
+snakemake  --use-conda --configfile config.yml -n
+# run the pipeline
+snakemake  --use-conda --configfile config.yml
+```
+
+## Output files
+
+The pipeline outputs your SV set containing all annotations in bed format in a folder named 'output' containing the CADD-SV and Raw-scores in row 6-8.
+Further information about individual annotations are kept in a subfolder named after your input dataset.
+
+
+
+
+
+# Further Informations
+
+## Annotations
 
 ##### Integrated Scores
 CADD (https://krishna.gs.washington.edu/download/CADD/bigWig/) \
@@ -76,13 +111,7 @@ ensembl-gff3 genebuild (ftp://ftp.ensembl.org/pub/release-96/gff3/homo_sapiens/H
 Fantom5 enhancers (https://zenodo.org/record/556775#.Xkz3G0oo-70) 
 
 
-## Config
-
-Almost ready to go. After you prepared the files above, you may need to adjust locations and names of these files in the `config.yml`. 
-
-## List of required input files
-
-- CADD-SV scores SV in bedformat on the GRCh38 genomebuild. The type of SV needs tobe contained in the 4th column. We recomment to split files containing more than 10.000 SVs into smaller files.
+## Converting VCF and other Genomebuilds
 
   If you want to score SVs in a VCF format or your SVs are not in GRCh38 genomebuild coordinates:
   We provide a environment to handle this.
@@ -106,26 +135,4 @@ Almost ready to go. After you prepared the files above, you may need to adjust l
   liftOver beds/setname_hg19_id.bed /dependencies/hg19ToHg38.over.chain.gz beds/setname_id.bed beds/setname_unlifted.bed
   ```
    
-- Annotations in the /dependencies folder
-- Models and scripts as cloned from this GIT repository
-
-
-## Run pipeline
-
-Ready to go! If you run the pipeline on a cluster see the `cluster.json` for an estimate of minimum requirements for the individual jobs. Note that this depends on your dataset size so you may have to adjust this.
-To start the pipeline:
-
-```bash
-conda activate run.caddsv
-# dry run to see if everything works
-snakemake  --use-conda --configfile config.yml -n
-# run the pipeline
-snakemake  --use-conda --configfile config.yml
-```
-
-## Output files
-
-The pipeline outputs your SV input containing all annotations in bed format as /SV-to-score/matrix.bed
-Further a file only containing the coordinates and the cadd-sv score is outputed at /SV-to-score/score.bed
-
 
