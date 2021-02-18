@@ -58,7 +58,7 @@ CL = ["gm12878", "msc", "mes", "imr90", "h1"]
 
 rule all:
     input:
-        matrix=expand("{sets}/score.bed", sets=SETS),
+      matrix=expand("output/{sets}_score.bed", sets=SETS),
 
 
 rule prep_chr1:
@@ -1687,12 +1687,36 @@ rule complete_script_100kbdown:
 
 rule scoring:
     input:
-        norm="{set}/matrix.bed",
-        up="{set}/matrix_100kbup.bed",
-        down="{set}/matrix_100kbdown.bed",
+        span="{set}/matrix.bed",
+        flank_up="{set}/matrix_100kbdown.bed",
+        flank_down="{set}/matrix_100kbup.bed",
+    conda:
+        "envs/SV.yml"
     output:
-        "{set}/score.bed",
+      temp("output/{set}.score"),
+    params:
+        name="{set}"
     shell:
         """
-        paste {input.norm} {input.up} {input.down} > {output}
+        Rscript --vanilla scripts/scoring.R {params.name} {input.span} {input.flank_up} {input.flank_down} {output}
         """
+
+
+
+rule sort:
+    input:
+      score="output/{set}.score",
+      header="annotations/header_final.txt",
+    conda:
+        "envs/SV.yml"
+    output:
+        "output/{set}_score.bed"
+    shell:
+        """
+        bedtools sort -i {input.score} | cat {input.header} - > {output}
+        """
+
+
+
+
+

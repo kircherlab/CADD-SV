@@ -76,7 +76,7 @@ hins.model=readRDS("models/hinsmodelRF.RDS")
 
 
 tbs=caddsv(name.caddsv) #to be scored
-id=as.matrix(read.table(paste("../beds/",name.caddsv,"_id.bed",sep=""))) #DEL INS DUP identifyer
+id=as.matrix(read.table(paste("input/id_",name.caddsv,".bed",sep=""))) #DEL INS DUP identifyer
 
 
 
@@ -91,18 +91,18 @@ DUP[[1]]=as.matrix(tbs[[1]][which(id[,4]=="DUP"),])
 DUP[[2]]=as.matrix(tbs[[2]][which(id[,4]=="DUP"),])
 
 ##fixing single DUP DEL INS transformation bug
-if(dim(DEL[[1]])[2]==1){
-DEL[[1]]=t(DEL[[1]])
-DEL[[2]]=t(DEL[[2]])
-}
-if(dim(INS[[1]])[2]==1){
-  INS[[1]]=t(INS[[1]])
-  INS[[2]]=t(INS[[2]])
-}
-if(dim(DUP[[1]])[2]==1){
-  DUP[[1]]=t(DUP[[1]])
-  DUP[[2]]=t(DUP[[2]])
-}
+#if(dim(DEL[[1]])[2]==1){
+#DEL[[1]]=t(DEL[[1]])
+#DEL[[2]]=t(DEL[[2]])
+#}
+#if(dim(INS[[1]])[2]==1){
+# INS[[1]]=t(INS[[1]])
+#  INS[[2]]=t(INS[[2]])
+#}
+#if(dim(DUP[[1]])[2]==1){
+#  DUP[[1]]=t(DUP[[1]])
+#  DUP[[2]]=t(DUP[[2]])
+#}
 
 
 dels=DEL
@@ -159,40 +159,42 @@ rank.del=ranker(del,gnomad.rank2[[1]])
 rank.ins=ranker(ins,gnomad.rank2[[2]])
 rank.dup=ranker(dup,gnomad.rank2[[3]])
 
+##fixing single DUP DEL INS transformation bug
+
+dels2=data.frame(dels[[1]])
+inss2=data.frame(inss[[1]])
+dups2=data.frame(dups[[1]])
+
+if(dim(id)[2]==5){
+  z.del=id[which(id[,4]=="DEL"),5]
+  z.ins=id[which(id[,4]=="INS"),5]
+  z.dup=id[which(id[,4]=="DUP"),5]
+} else {
+  z.del=paste(name.caddsv,paste(id[,1],paste(id[,2],id[,3],sep="-"),sep=":"),sep="_")[which(id[,4]=="DEL")]
+  z.ins=paste(name.caddsv,paste(id[,1],paste(id[,2],id[,3],sep="-"),sep=":"),sep="_")[which(id[,4]=="INS")]
+  z.dup=paste(name.caddsv,paste(id[,1],paste(id[,2],id[,3],sep="-"),sep=":"),sep="_")[which(id[,4]=="DUP")]
+  
+}
+  
+d=cbind(dels2[,1:3],"DEL",z.del,rank.del,del1,del2,dels2[,4:131])
+dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,dup2,dups2[,4:131])
+inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,inss2[,4:131])
 
 
-del=rank.del
-ins=rank.ins
-dup=rank.dup
 
-
-cadd=cbind(id,2)
-cadd[which(id[,4]=="DEL"),5]=rank.del
-cadd[which(id[,4]=="DUP"),5]=rank.dup
-cadd[which(id[,4]=="INS"),5]=rank.ins
-
-write.table(cadd,paste(name.caddsv,".score",sep=""),sep="\t",
-            row.names = F, 
-            col.names = T, 
-            quote = F)
-
-
-d=cbind(dels[[1]][,1:3],"DEL",rank.del,del1,del2,dels[[1]][,4:131])
-inserts=cbind(inss[[1]][,1:3],"INS",rank.ins,ins1,ins2,inss[[1]][,4:131])
-dupli=cbind(dups[[1]][,1:3],"DUP",rank.dup,dup1,dup2,dups[[1]][,4:131])
-
-
-header=c(colnames(dels[[1]])[1:3],"type","CADDSV-score","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
+header=c(colnames(dels[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
 
 colnames(d)=header
 colnames(inserts)=header
 colnames(dupli)=header
+
 d[which(d[,1]==0),1]="X"
 inserts[which(inserts[,1]==0),1]="X"
 dupli[which(dupli[,1]==0),1]="X"
 
-
-write.table(rbind(d,inserts,dupli),paste(name.caddsv,".score",sep=""),sep="\t",
+write.table(rbind(d,inserts,dupli),paste("output/",name.caddsv,".score",sep=""),sep="\t",
             row.names = F, 
             col.names = F, 
             quote = F)
+
+
