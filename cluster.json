@@ -1,8 +1,10 @@
 { "__default__" : 
   {
+    "error": 'logs/%x_%j_%N.err',
+    "output": 'logs/%x_%j_%N.log',
     "time" : "08:00",
     "threads" : 8,
-    "mem" : "64000",
+    "mem" : "2000",
     "queue" : "medium"
   }
 }
