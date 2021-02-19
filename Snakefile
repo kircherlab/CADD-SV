@@ -110,10 +110,10 @@ rule CTCF:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_ctcf.bed",
+        t1=temp("{set}/{set}_ctcf.bed"),
     shell:
         """
-        bedtools coverage -b {input.anno} -a {input.bed} > {output}
+        bedtools coverage -b {input.anno} -a {input.bed} > {output.t1}
         """
 
 
@@ -124,10 +124,10 @@ rule ultraconserved:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_ultraconserved.bed",
+        t1=temp("{set}/{set}_ultraconserved.bed"),
     shell:
         """
-        bedtools coverage -b {input.anno} -a {input.bed} > {output}
+        bedtools coverage -b {input.anno} -a {input.bed} > {output.t1}
         """
 
 
@@ -139,10 +139,10 @@ rule GC:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_gc.bed",
+        t1=temp("{set}/{set}_gc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output.t1}
         """
 
 
@@ -170,7 +170,7 @@ rule gene_model:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_genemodel.bed",
+        temp("{set}/{set}_genemodel.bed"),
     shell:
         """
         paste <( bedtools coverage -b <(grep "exon" {input.anno}) -a {input.bed} | cut -f 1,2,3,5 ) <(bedtools coverage -b <(grep "transcript" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "gene" {input.anno} ) -a {input.bed} | cut -f 5) <( bedtools coverage -b <( grep "start_codon" {input.anno} ) -a {input.bed} | cut -f 5 ) <( bedtools coverage -b <(grep "stop_codon" {input.anno}) -a {input.bed} | cut -f 5) <(bedtools coverage -b <(grep "three_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "five_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "CDS" {input.anno}) -a {input.bed} | cut -f 5 ) > {output}
@@ -187,7 +187,7 @@ rule gene_model_dist:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_genetic_dist.bed",
+        temp("{set}/{set}_genetic_dist.bed"),
     shell:
         """
         grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}   """
@@ -216,7 +216,7 @@ rule pli:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_pli.bed",
+        temp("{set}/{set}_pli.bed"),
     shell:
         """
         Rscript --vanilla scripts/PLIextract.R {input.gn} {input.pli} {output}
@@ -231,7 +231,7 @@ rule cadd_PC_phylop:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_CADD_PC_PhyloP_maxsum.bed",
+        temp("{set}/{set}_CADD_PC_PhyloP_maxsum.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy8.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4,4,5,5,6,6,7,7,8,8 -o max,sum,max,sum,max,sum,max,sum,max,sum; done < {input.bed}) > {output}
@@ -245,7 +245,7 @@ rule cadd2:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_cadd2_count.bed",
+        temp("{set}/{set}_cadd2_count.bed"),
     shell:
         """
         (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
@@ -263,7 +263,7 @@ rule gerp:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_gerp_mean.bed",
+        temp("{set}/{set}_gerp_mean.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
@@ -277,7 +277,7 @@ rule gerp2:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_gerp2_count.bed",
+        temp("{set}/{set}_gerp2_count.bed"),
     shell:
         """
         (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy5_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
@@ -292,7 +292,7 @@ rule LINSIGHT:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_linsight_sum.bed",
+        temp("{set}/{set}_linsight_sum.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o sum; done < {input.bed}) > {output}
@@ -311,7 +311,7 @@ rule EP:
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_EP.bed",
+        o1=temp("{set}/{set}_EP.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.ep} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -337,7 +337,7 @@ rule fire2:
     input:
         expand("{{set}}/{{set}}_fire_{fire}.bed", fire=CL),
     output:
-        "{set}/{set}_fire.bed",
+        temp("{set}/{set}_fire.bed"),
     shell:
         "paste {input} > {output}"
 
@@ -350,7 +350,7 @@ rule HIC_hESC:
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_HIC_hESC.bed",
+        o1=temp("{set}/{set}_HIC_hESC.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -377,7 +377,7 @@ rule mergetad:
     input:
         expand("{{set}}/{{set}}_encode_{cells}_{tad}_hic.bed", cells=CELLS, tad=TAD),
     output:
-        "{set}/{set}_HIC.bed",
+        temp("{set}/{set}_HIC.bed"),
     shell:
         "paste {input} > {output}"
 
@@ -390,7 +390,7 @@ rule microsynteny:
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_microsynteny.bed",
+        o1=temp("{set}/{set}_microsynteny.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -404,7 +404,7 @@ rule ccr:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_ccr_mean.bed",
+        temp("{set}/{set}_ccr_mean.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o max > {output}
@@ -440,8 +440,8 @@ rule genomegitar3:
     input:
         "{set}/{set}_DI.bed",
     output:
-        maxgg="{set}/{set}_DI_max.bed",
-        mingg="{set}/{set}_DI_min.bed",
+        maxgg=temp("{set}/{set}_DI_max.bed"),
+        mingg=temp("{set}/{set}_DI_min.bed"),
     shell:
         """
         cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i<m)m=$i;print m}}' > {output.mingg}
@@ -455,7 +455,7 @@ rule MPC:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_MPC_mean.bed",
+        temp("{set}/{set}_MPC_mean.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o mean > {output}
@@ -469,7 +469,7 @@ rule RemapTF:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_remapTF_mean.bed",
+        temp("{set}/{set}_remapTF_mean.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
@@ -485,7 +485,7 @@ rule encode:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_encode_{encodes}_mean.bed",
+        temp("{set}/{set}_encode_{encodes}_mean.bed"),
     shell:
         "tabix {input.anno} -R {input.merg} | cat annotations/dummy5_nochr.bed - | bedtools map -a {input.bed} -b - -c 4,4 -o max,sum > {output}"
 
@@ -494,7 +494,7 @@ rule encode2:
     input:
         expand("{{set}}/{{set}}_encode_{encodes}_mean.bed", encodes=ENCODES),
     output:
-        "{set}/{set}_encode.bed",
+        temp("{set}/{set}_encode.bed"),
     shell:
         "paste {input} > {output}"
 
@@ -507,7 +507,7 @@ rule chromHMM_MAX:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_chromHMM_max.bed",
+        temp("{set}/{set}_chromHMM_max.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(cat annotations/dummy_chrhmm.bed; tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max; done < {input.bed}) > {output}
@@ -524,7 +524,7 @@ rule Fantom5_counts:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_f5_counts.bed",
+        temp("{set}/{set}_f5_counts.bed"),
     shell:
         """
         bedtools coverage -a {input.bed} -b {input.anno} -counts  > {output}
@@ -538,7 +538,7 @@ rule HI:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_dddhi.bed",
+        temp("{set}/{set}_dddhi.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 5 -o max > {output}
@@ -552,7 +552,7 @@ rule deepc:
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_deepc.bed",
+        temp("{set}/{set}_deepc.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
@@ -604,13 +604,13 @@ rule complete_script:
 ###############################################################################################################################################################
 
 
-rule prep_chr_100kbup:
+rule prep_chr_100bpup:
     input:
         bed="beds/{set}/{set}_wchr.bed",
         genome="annotations/hs38.fa.genome",
     output:
-        wchr="beds/{set}/{set}_100kbup.bed",
-        nchr="beds/{set}/{set}_100kbup_nchr.bed",
+        wchr="beds/{set}/{set}_100bpup.bed",
+        nchr="beds/{set}/{set}_100bpup_nchr.bed",
     conda:
         "envs/SV.yml"
     shell:
@@ -621,15 +621,15 @@ rule prep_chr_100kbup:
         """
 
 
-rule prep_merg1_100kbup:
+rule prep_merg1_100bpup:
     input:
-        nchr="beds/{set}/{set}_100kbup_nchr.bed",
-        wchr="beds/{set}/{set}_100kbup.bed",
+        nchr="beds/{set}/{set}_100bpup_nchr.bed",
+        wchr="beds/{set}/{set}_100bpup.bed",
     conda:
         "envs/SV.yml"
     output:
-        nchr="beds/{set}/{set}_100kbup_nchr_merged.bed",
-        wchr="beds/{set}/{set}_100kbup_merged.bed",
+        nchr="beds/{set}/{set}_100bpup_nchr_merged.bed",
+        wchr="beds/{set}/{set}_100bpup_merged.bed",
     shell:
         """
         bedtools merge -i {input.nchr} > {output.nchr}
@@ -639,28 +639,28 @@ rule prep_merg1_100kbup:
 
 
 # CTCF Peaks from wang_et_al
-rule CTCF_100kbup:
+rule CTCF_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/CTCF/Wangetal_hg38.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_ctcf.bed",
+        temp("{set}/{set}_100bpup_ctcf.bed"),
     shell:
         """
         bedtools coverage -b {input.anno} -a {input.bed} > {output}
         """
 
 
-rule ultraconserved_100kbup:
+rule ultraconserved_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/ultraconserved/ultraconserved_hg38_muliz120M_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_ultraconserved.bed",
+        temp("{set}/{set}_100bpup_ultraconserved.bed"),
     shell:
         """
         bedtools coverage -b {input.anno} -a {input.bed} > {output}
@@ -668,14 +668,14 @@ rule ultraconserved_100kbup:
 
 
 # gc content from ucsc
-rule GC_100kbup:
+rule GC_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/GC/gc5Base.bedGraph.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_gc.bed",
+        temp("{set}/{set}_100bpup_gc.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
@@ -683,15 +683,15 @@ rule GC_100kbup:
 
 
 # ensemble genome build temporary genenames and attribute extraction
-rule gene_model_tmp_100kbup:
+rule gene_model_tmp_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
-        merg="beds/{set}/{set}_100kbup_nchr_merged.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
+        merg="beds/{set}/{set}_100bpup_nchr_merged.bed",
         anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.gtf.gz",
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/gm_tmp_100kbup.bed"),
+        t1=temp("{set}/gm_tmp_100bpup.bed"),
     shell:
         """
         tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output.t1}
@@ -699,14 +699,14 @@ rule gene_model_tmp_100kbup:
 
 
 # genemodels
-rule gene_model_100kbup:
+rule gene_model_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
-        anno="{set}/gm_tmp_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
+        anno="{set}/gm_tmp_100bpup.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_genemodel.bed",
+        temp("{set}/{set}_100bpup_genemodel.bed"),
     shell:
         """
         paste <( bedtools coverage -b <(grep "exon" {input.anno}) -a {input.bed} | cut -f 1,2,3,5 ) <(bedtools coverage -b <(grep "transcript" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "gene" {input.anno} ) -a {input.bed} | cut -f 5) <( bedtools coverage -b <( grep "start_codon" {input.anno} ) -a {input.bed} | cut -f 5 ) <( bedtools coverage -b <(grep "stop_codon" {input.anno}) -a {input.bed} | cut -f 5) <(bedtools coverage -b <(grep "three_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "five_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "CDS" {input.anno}) -a {input.bed} | cut -f 5 ) > {output}
@@ -716,28 +716,28 @@ rule gene_model_100kbup:
 # grep "exon" {input.anno} | bedtools coverage -b stdin -a {input.bed} |cut -f 1,2,3,5 |paste - <(grep "transcript" {input.anno} |bedtools coverage -b stdin -a {input.bed} |cut -f 5 ) |paste - <(grep "gene" {input.anno} | bedtools coverage -b stdin -a {input.bed} | cut -f 5)|paste - <(grep "start_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "stop_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5) |paste - <(grep "three_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "five_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "CDS" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 ) >> {output}   """
 
 
-rule gene_model_dist_100kbup:
+rule gene_model_dist_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_genetic_dist.bed",
+        temp("{set}/{set}_100bpup_genetic_dist.bed"),
     shell:
         """
         grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}   """
 
 
 # gene names necessary for PlI extraction
-rule gene_names_100kbup:
+rule gene_names_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.GENES.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_genenames.bed",
+        temp("{set}/{set}_100bpup_genenames.bed"),
     shell:
         """
         bedtools map -b {input.anno} -a {input.bed} -c 4 -o distinct > {output}
@@ -745,14 +745,14 @@ rule gene_names_100kbup:
 
 
 # PLi
-rule pli_100kbup:
+rule pli_100bpup:
     input:
-        gn="{set}/{set}_100kbup_genenames.bed",
+        gn="{set}/{set}_100bpup_genenames.bed",
         pli="annotations/gnomad/pli_exac.csv",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_pli.bed",
+        temp("{set}/{set}_100bpup_pli.bed"),
     shell:
         """
         Rscript --vanilla scripts/PLIextract.R {input.gn} {input.pli} {output}
@@ -760,28 +760,28 @@ rule pli_100kbup:
 
 
 # retrieving mean and max CADD scores from cadd_10score.bed.gz
-rule cadd_PC_phylop_100kbup:
+rule cadd_PC_phylop_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/PhastCons/CADD_PC_PhyloP_scores.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_CADD_PC_PhyloP_maxsum.bed",
+        temp("{set}/{set}_100bpup_CADD_PC_PhyloP_maxsum.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy8.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4,4,5,5,6,6,7,7,8,8 -o max,sum,max,sum,max,sum,max,sum,max,sum; done < {input.bed}) > {output}
         """
 
 
-rule cadd2_100kbup:
+rule cadd2_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/CADD/CADD_GRCh38-v1.5.bedGraph_90q_12.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_cadd2_count.bed",
+        temp("{set}/{set}_100bpup_cadd2_count.bed"),
     shell:
         """
         (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
@@ -792,28 +792,28 @@ rule cadd2_100kbup:
 # merg="beds/{set}/{set}_merged.bed",
 
 
-rule gerp_100kbup:
+rule gerp_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_gerp_mean.bed",
+        temp("{set}/{set}_100bpup_gerp_mean.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
-rule gerp2_100kbup:
+rule gerp2_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_gerp2_count.bed",
+        temp("{set}/{set}_100bpup_gerp2_count.bed"),
     shell:
         """
         (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
@@ -821,14 +821,14 @@ rule gerp2_100kbup:
 
 
 # see cadd2
-rule LINSIGHT_100kbup:
+rule LINSIGHT_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/linsight/LINSIGHT_hg38_sort.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_linsight_sum.bed",
+        temp("{set}/{set}_100bpup_linsight_sum.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o sum; done < {input.bed}) > {output}
@@ -840,14 +840,14 @@ rule LINSIGHT_100kbup:
 
 
 # enhancer promotor links
-rule EP_100kbup:
+rule EP_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         ep="annotations/enhancer-promoter-links/sorted_encode.bed",
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_100kbup_EP.bed",
+        o1=temp("{set}/{set}_100bpup_EP.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.ep} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -855,38 +855,38 @@ rule EP_100kbup:
 
 
 # frequently interacting regulatory elements
-rule fire_100kbup:
+rule fire_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/FIRE/fire_{celllines}.bed",
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100kbup_fire_{celllines}.bed"),
+        t1=temp("{set}/{set}_100bpup_fire_{celllines}.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output.t1}
         """
 
 
-rule fire2_100kbup:
+rule fire2_100bpup:
     input:
-        expand("{{set}}/{{set}}_100kbup_fire_{fire}.bed", fire=CL),
+        expand("{{set}}/{{set}}_100bpup_fire_{fire}.bed", fire=CL),
     output:
-        "{set}/{set}_100kbup_fire.bed",
+        temp("{set}/{set}_100bpup_fire.bed"),
     shell:
         "paste {input} > {output}"
 
 
 # hic data hESC hg18
-rule HIC_hESC_100kbup:
+rule HIC_hESC_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         hic="annotations/hic/hESC/combined/sorted.total.combined.domain",
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_100kbup_HIC_hESC.bed",
+        o1=temp("{set}/{set}_100bpup_HIC_hESC.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -894,14 +894,14 @@ rule HIC_hESC_100kbup:
 
 
 # hic data from encode
-rule HIC_encode_100kbup:
+rule HIC_encode_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         hic="annotations/Encode-HIC/{cells}/sorted_{tad}.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        o1=temp("{set}/{set}_100kbup_encode_{cells}_{tad}_hic.bed"),
+        o1=temp("{set}/{set}_100bpup_encode_{cells}_{tad}_hic.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -909,40 +909,40 @@ rule HIC_encode_100kbup:
 
 
 # merging encode HIC data
-rule mergetad_100kbup:
+rule mergetad_100bpup:
     input:
         expand(
-            "{{set}}/{{set}}_100kbup_encode_{cells}_{tad}_hic.bed", cells=CELLS, tad=TAD
+            "{{set}}/{{set}}_100bpup_encode_{cells}_{tad}_hic.bed", cells=CELLS, tad=TAD
         ),
     output:
-        "{set}/{set}_100kbup_HIC.bed",
+        temp("{set}/{set}_100bpup_HIC.bed"),
     shell:
         "paste {input} > {output}"
 
 
 # micro syntenic regions
-rule microsynteny_100kbup:
+rule microsynteny_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         hic="annotations/synteny/microsynteny.bed",
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_100kbup_microsynteny.bed",
+        o1=temp("{set}/{set}_100bpup_microsynteny.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
         """
 
 
-rule ccr_100kbup:
+rule ccr_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/ccr/ccrs.all.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_ccr_mean.bed",
+        temp("{set}/{set}_100bpup_ccr_mean.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o max > {output}
@@ -950,14 +950,14 @@ rule ccr_100kbup:
 
 
 # directionality index of HIC data from genomegitar database
-rule genomegitar1_100kbup:
+rule genomegitar1_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/genomegitar/{gg}/DI_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100kbup_genomegitar_{gg}.bed"),
+        t1=temp("{set}/{set}_100bpup_genomegitar_{gg}.bed"),
     shell:
         """
         bedtools map -a {input.bed} \
@@ -965,21 +965,21 @@ rule genomegitar1_100kbup:
         """
 
 
-rule genomegitar2_100kbup:
+rule genomegitar2_100bpup:
     input:
-        expand("{{set}}/{{set}}_100kbup_genomegitar_{gg}.bed", gg=genomegitars),
+        expand("{{set}}/{{set}}_100bpup_genomegitar_{gg}.bed", gg=genomegitars),
     output:
-        temp("{set}/{set}_100kbup_DI.bed"),
+        temp("{set}/{set}_100bpup_DI.bed"),
     shell:
         "paste {input} > {output}"
 
 
-rule genomegitar3_100kbup:
+rule genomegitar3_100bpup:
     input:
-        "{set}/{set}_100kbup_DI.bed",
+        "{set}/{set}_100bpup_DI.bed",
     output:
-        maxgg="{set}/{set}_100kbup_DI_max.bed",
-        mingg="{set}/{set}_100kbup_DI_min.bed",
+        maxgg=temp("{set}/{set}_100bpup_DI_max.bed"),
+        mingg=temp("{set}/{set}_100bpup_DI_min.bed"),
     shell:
         """
         cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i<m)m=$i;print m}}' > {output.mingg}
@@ -987,28 +987,28 @@ rule genomegitar3_100kbup:
         """
 
 
-rule MPC_100kbup:
+rule MPC_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/MPC/transcript_constraints_hg38liftover.bg.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_MPC_mean.bed",
+        temp("{set}/{set}_100bpup_MPC_mean.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o mean > {output}
         """
 
 
-rule RemapTF_100kbup:
+rule RemapTF_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/ReMap/ReMap2_overlapTF_hg38.bg.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_remapTF_mean.bed",
+        temp("{set}/{set}_100bpup_remapTF_mean.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
@@ -1016,37 +1016,37 @@ rule RemapTF_100kbup:
 
 
 # various regulatory and epigenetic features from ENCODE (see ENCODE list)
-rule encode_100kbup:
+rule encode_100bpup:
     input:
-        merg="beds/{set}/{set}_100kbup_nchr_merged.bed",
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        merg="beds/{set}/{set}_100bpup_nchr_merged.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/encode/{encodes}/{encodes}_merged_90quant.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_encode_{encodes}_mean.bed",
+        temp("{set}/{set}_100bpup_encode_{encodes}_mean.bed"),
     shell:
         "tabix {input.anno} -R {input.merg} | cat annotations/dummy5_nchr.bed - | bedtools map -a {input.bed} -b - -c 4,4 -o max,sum > {output}"
 
 
-rule encode2_100kbup:
+rule encode2_100bpup:
     input:
-        expand("{{set}}/{{set}}_100kbup_encode_{encodes}_mean.bed", encodes=ENCODES),
+        expand("{{set}}/{{set}}_100bpup_encode_{encodes}_mean.bed", encodes=ENCODES),
     output:
-        "{set}/{set}_100kbup_encode.bed",
+        temp("{set}/{set}_100bpup_encode.bed"),
     shell:
         "paste {input} > {output}"
 
 
 # genome states infered from chromHMM
-rule chromHMM_MAX_100kbup:
+rule chromHMM_MAX_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup_nchr.bed",
+        bed="beds/{set}/{set}_100bpup_nchr.bed",
         anno="annotations/chromhmm/chromHMM_GRCh38.bg.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_chromHMM_max.bed",
+        temp("{set}/{set}_100bpup_chromHMM_max.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(cat annotations/dummy_chrhmm.bed; tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max; done < {input.bed}) > {output}
@@ -1056,79 +1056,79 @@ rule chromHMM_MAX_100kbup:
 #  bedtools map -a {input.bed} -b stdin -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max > {output}
 
 
-rule Fantom5_counts_100kbup:
+rule Fantom5_counts_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/fantom5/F5.hg38.enhancers_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_f5_counts.bed",
+        temp("{set}/{set}_100bpup_f5_counts.bed"),
     shell:
         """
         bedtools coverage -a {input.bed} -b {input.anno} -counts  > {output}
         """
 
 
-rule HI_100kbup:
+rule HI_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/DDD_HI/hg38_HI_Predictions_version3_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_dddhi.bed",
+        temp("{set}/{set}_100bpup_dddhi.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 5 -o max > {output}
         """
 
 
-rule deepc_100kbup:
+rule deepc_100bpup:
     input:
-        bed="beds/{set}/{set}_100kbup.bed",
+        bed="beds/{set}/{set}_100bpup.bed",
         anno="annotations/deepc/saliencies_merged_gm12878_5kb_10bp.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbup_deepc.bed",
+        temp("{set}/{set}_100bpup_deepc.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
-rule complete_script_100kbup:
+rule complete_script_100bpup:
     input:
-        cadd="{set}/{set}_100kbup_CADD_PC_PhyloP_maxsum.bed",
-        cadd2="{set}/{set}_100kbup_cadd2_count.bed",
-        ccr="{set}/{set}_100kbup_ccr_mean.bed",
-        chromHMM="{set}/{set}_100kbup_chromHMM_max.bed",
-        ctcf="{set}/{set}_100kbup_ctcf.bed",
-        di_min="{set}/{set}_100kbup_DI_min.bed",
-        di_max="{set}/{set}_100kbup_DI_max.bed",
-        encode="{set}/{set}_100kbup_encode.bed",
-        ep="{set}/{set}_100kbup_EP.bed",
-        fire="{set}/{set}_100kbup_fire.bed",
-        gc="{set}/{set}_100kbup_gc.bed",
-        gm="{set}/{set}_100kbup_genemodel.bed",
-        gerp="{set}/{set}_100kbup_gerp_mean.bed",
-        gerp2="{set}/{set}_100kbup_gerp2_count.bed",
-        hic="{set}/{set}_100kbup_HIC.bed",
-        hesc="{set}/{set}_100kbup_HIC_hESC.bed",
-        microsyn="{set}/{set}_100kbup_microsynteny.bed",
-        mpc="{set}/{set}_100kbup_MPC_mean.bed",
-        pli="{set}/{set}_100kbup_pli.bed",
-        remapTF="{set}/{set}_100kbup_remapTF_mean.bed",
-        f5="{set}/{set}_100kbup_f5_counts.bed",
-        hi="{set}/{set}_100kbup_dddhi.bed",
-        deepc="{set}/{set}_100kbup_deepc.bed",
-        ultrac="{set}/{set}_100kbup_ultraconserved.bed",
-        g_dist="{set}/{set}_100kbup_genetic_dist.bed",
-        linsight="{set}/{set}_100kbup_linsight_sum.bed",
+        cadd="{set}/{set}_100bpup_CADD_PC_PhyloP_maxsum.bed",
+        cadd2="{set}/{set}_100bpup_cadd2_count.bed",
+        ccr="{set}/{set}_100bpup_ccr_mean.bed",
+        chromHMM="{set}/{set}_100bpup_chromHMM_max.bed",
+        ctcf="{set}/{set}_100bpup_ctcf.bed",
+        di_min="{set}/{set}_100bpup_DI_min.bed",
+        di_max="{set}/{set}_100bpup_DI_max.bed",
+        encode="{set}/{set}_100bpup_encode.bed",
+        ep="{set}/{set}_100bpup_EP.bed",
+        fire="{set}/{set}_100bpup_fire.bed",
+        gc="{set}/{set}_100bpup_gc.bed",
+        gm="{set}/{set}_100bpup_genemodel.bed",
+        gerp="{set}/{set}_100bpup_gerp_mean.bed",
+        gerp2="{set}/{set}_100bpup_gerp2_count.bed",
+        hic="{set}/{set}_100bpup_HIC.bed",
+        hesc="{set}/{set}_100bpup_HIC_hESC.bed",
+        microsyn="{set}/{set}_100bpup_microsynteny.bed",
+        mpc="{set}/{set}_100bpup_MPC_mean.bed",
+        pli="{set}/{set}_100bpup_pli.bed",
+        remapTF="{set}/{set}_100bpup_remapTF_mean.bed",
+        f5="{set}/{set}_100bpup_f5_counts.bed",
+        hi="{set}/{set}_100bpup_dddhi.bed",
+        deepc="{set}/{set}_100bpup_deepc.bed",
+        ultrac="{set}/{set}_100bpup_ultraconserved.bed",
+        g_dist="{set}/{set}_100bpup_genetic_dist.bed",
+        linsight="{set}/{set}_100bpup_linsight_sum.bed",
         header="annotations/header.txt",
     output:
-        "{set}/matrix_100kbup.bed",
+        "{set}/matrix_100bpup.bed",
     conda:
         "envs/SV.yml"
     shell:
@@ -1143,13 +1143,13 @@ rule complete_script_100kbup:
 ###############################################################################################################################################################
 
 
-rule prep_chr_100kbdown:
+rule prep_chr_100bpdown:
     input:
         bed="beds/{set}/{set}_wchr.bed",
         genome="annotations/hs38.fa.genome",
     output:
-        wchr="beds/{set}/{set}_100kbdown.bed",
-        nchr="beds/{set}/{set}_100kbdown_nchr.bed",
+        wchr="beds/{set}/{set}_100bpdown.bed",
+        nchr="beds/{set}/{set}_100bpdown_nchr.bed",
     conda:
         "envs/SV.yml"
     shell:
@@ -1160,15 +1160,15 @@ rule prep_chr_100kbdown:
         """
 
 
-rule prep_merg1_100kbdown:
+rule prep_merg1_100bpdown:
     input:
-        nchr="beds/{set}/{set}_100kbdown_nchr.bed",
-        wchr="beds/{set}/{set}_100kbdown.bed",
+        nchr="beds/{set}/{set}_100bpdown_nchr.bed",
+        wchr="beds/{set}/{set}_100bpdown.bed",
     conda:
         "envs/SV.yml"
     output:
-        nchr="beds/{set}/{set}_100kbdown_nchr_merged.bed",
-        wchr="beds/{set}/{set}_100kbdown_merged.bed",
+        nchr="beds/{set}/{set}_100bpdown_nchr_merged.bed",
+        wchr="beds/{set}/{set}_100bpdown_merged.bed",
     shell:
         """
         bedtools merge -i {input.nchr} > {output.nchr}
@@ -1178,28 +1178,28 @@ rule prep_merg1_100kbdown:
 
 
 # CTCF Peaks from wang_et_al
-rule CTCF_100kbdown:
+rule CTCF_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/CTCF/Wangetal_hg38.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_ctcf.bed",
+        temp("{set}/{set}_100bpdown_ctcf.bed"),
     shell:
         """
         bedtools coverage -b {input.anno} -a {input.bed} > {output}
         """
 
 
-rule ultraconserved_100kbdown:
+rule ultraconserved_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/ultraconserved/ultraconserved_hg38_muliz120M_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_ultraconserved.bed",
+        temp("{set}/{set}_100bpdown_ultraconserved.bed"),
     shell:
         """
         bedtools coverage -b {input.anno} -a {input.bed} > {output}
@@ -1207,14 +1207,14 @@ rule ultraconserved_100kbdown:
 
 
 # gc content from ucsc
-rule GC_100kbdown:
+rule GC_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/GC/gc5Base.bedGraph.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_gc.bed",
+        temp("{set}/{set}_100bpdown_gc.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
@@ -1222,15 +1222,15 @@ rule GC_100kbdown:
 
 
 # ensemble genome build temporary genenames and attribute extraction
-rule gene_model_tmp_100kbdown:
+rule gene_model_tmp_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
-        merg="beds/{set}/{set}_100kbdown_nchr_merged.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
+        merg="beds/{set}/{set}_100bpdown_nchr_merged.bed",
         anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.gtf.gz",
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/gm_tmp_100kbdown.bed"),
+        t1=temp("{set}/gm_tmp_100bpdown.bed"),
     shell:
         """
         tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output.t1}
@@ -1238,14 +1238,14 @@ rule gene_model_tmp_100kbdown:
 
 
 # genemodels
-rule gene_model_100kbdown:
+rule gene_model_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
-        anno="{set}/gm_tmp_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
+        anno="{set}/gm_tmp_100bpdown.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_genemodel.bed",
+        temp("{set}/{set}_100bpdown_genemodel.bed"),
     shell:
         """
         paste <( bedtools coverage -b <(grep "exon" {input.anno}) -a {input.bed} | cut -f 1,2,3,5 ) <(bedtools coverage -b <(grep "transcript" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "gene" {input.anno} ) -a {input.bed} | cut -f 5) <( bedtools coverage -b <( grep "start_codon" {input.anno} ) -a {input.bed} | cut -f 5 ) <( bedtools coverage -b <(grep "stop_codon" {input.anno}) -a {input.bed} | cut -f 5) <(bedtools coverage -b <(grep "three_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "five_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "CDS" {input.anno}) -a {input.bed} | cut -f 5 ) > {output}
@@ -1255,28 +1255,28 @@ rule gene_model_100kbdown:
 # grep "exon" {input.anno} | bedtools coverage -b stdin -a {input.bed} |cut -f 1,2,3,5 |paste - <(grep "transcript" {input.anno} |bedtools coverage -b stdin -a {input.bed} |cut -f 5 ) |paste - <(grep "gene" {input.anno} | bedtools coverage -b stdin -a {input.bed} | cut -f 5)|paste - <(grep "start_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "stop_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5) |paste - <(grep "three_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "five_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "CDS" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 ) >> {output}   """
 
 
-rule gene_model_dist_100kbdown:
+rule gene_model_dist_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_genetic_dist.bed",
+        temp("{set}/{set}_100bpdown_genetic_dist.bed"),
     shell:
         """
         grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}   """
 
 
 # gene names necessary for PlI extraction
-rule gene_names_100kbdown:
+rule gene_names_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.GENES.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_genenames.bed",
+        temp("{set}/{set}_100bpdown_genenames.bed"),
     shell:
         """
         bedtools map -b {input.anno} -a {input.bed} -c 4 -o distinct > {output}
@@ -1284,14 +1284,14 @@ rule gene_names_100kbdown:
 
 
 # PLi
-rule pli_100kbdown:
+rule pli_100bpdown:
     input:
-        gn="{set}/{set}_100kbdown_genenames.bed",
+        gn="{set}/{set}_100bpdown_genenames.bed",
         pli="annotations/gnomad/pli_exac.csv",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_pli.bed",
+        temp("{set}/{set}_100bpdown_pli.bed"),
     shell:
         """
         Rscript --vanilla scripts/PLIextract.R {input.gn} {input.pli} {output}
@@ -1299,28 +1299,28 @@ rule pli_100kbdown:
 
 
 # retrieving mean and max CADD scores from cadd_10score.bed.gz
-rule cadd_PC_phylop_100kbdown:
+rule cadd_PC_phylop_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/PhastCons/CADD_PC_PhyloP_scores.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_CADD_PC_PhyloP_maxsum.bed",
+        temp("{set}/{set}_100bpdown_CADD_PC_PhyloP_maxsum.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy8.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4,4,5,5,6,6,7,7,8,8 -o max,sum,max,sum,max,sum,max,sum,max,sum; done < {input.bed}) > {output}
         """
 
 
-rule cadd2_100kbdown:
+rule cadd2_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/CADD/CADD_GRCh38-v1.5.bedGraph_90q_12.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_cadd2_count.bed",
+        temp("{set}/{set}_100bpdown_cadd2_count.bed"),
     shell:
         """
         (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
@@ -1331,28 +1331,28 @@ rule cadd2_100kbdown:
 # merg="beds/{set}/{set}_merged.bed",
 
 
-rule gerp_100kbdown:
+rule gerp_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_gerp_mean.bed",
+        temp("{set}/{set}_100bpdown_gerp_mean.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
-rule gerp2_100kbdown:
+rule gerp2_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_gerp2_count.bed",
+        temp("{set}/{set}_100bpdown_gerp2_count.bed"),
     shell:
         """
         (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
@@ -1360,14 +1360,14 @@ rule gerp2_100kbdown:
 
 
 # see cadd2
-rule LINSIGHT_100kbdown:
+rule LINSIGHT_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/linsight/LINSIGHT_hg38_sort.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_linsight_sum.bed",
+        temp("{set}/{set}_100bpdown_linsight_sum.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o sum; done < {input.bed}) > {output}
@@ -1379,14 +1379,14 @@ rule LINSIGHT_100kbdown:
 
 
 # enhancer promotor links
-rule EP_100kbdown:
+rule EP_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         ep="annotations/enhancer-promoter-links/sorted_encode.bed",
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_100kbdown_EP.bed",
+        o1=temp("{set}/{set}_100bpdown_EP.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.ep} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -1394,38 +1394,38 @@ rule EP_100kbdown:
 
 
 # frequently interacting regulatory elements
-rule fire_100kbdown:
+rule fire_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/FIRE/fire_{celllines}.bed",
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100kbdown_fire_{celllines}.bed"),
+        t1=temp("{set}/{set}_100bpdown_fire_{celllines}.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output.t1}
         """
 
 
-rule fire2_100kbdown:
+rule fire2_100bpdown:
     input:
-        expand("{{set}}/{{set}}_100kbdown_fire_{fire}.bed", fire=CL),
+        expand("{{set}}/{{set}}_100bpdown_fire_{fire}.bed", fire=CL),
     output:
-        "{set}/{set}_100kbdown_fire.bed",
+        temp("{set}/{set}_100bpdown_fire.bed"),
     shell:
         "paste {input} > {output}"
 
 
 # hic data hESC hg18
-rule HIC_hESC_100kbdown:
+rule HIC_hESC_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         hic="annotations/hic/hESC/combined/sorted.total.combined.domain",
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_100kbdown_HIC_hESC.bed",
+        o1=temp("{set}/{set}_100bpdown_HIC_hESC.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -1433,14 +1433,14 @@ rule HIC_hESC_100kbdown:
 
 
 # hic data from encode
-rule HIC_encode_100kbdown:
+rule HIC_encode_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         hic="annotations/Encode-HIC/{cells}/sorted_{tad}.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        o1=temp("{set}/{set}_100kbdown_encode_{cells}_{tad}_hic.bed"),
+        o1=temp("{set}/{set}_100bpdown_encode_{cells}_{tad}_hic.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
@@ -1448,42 +1448,42 @@ rule HIC_encode_100kbdown:
 
 
 # merging encode HIC data
-rule mergetad_100kbdown:
+rule mergetad_100bpdown:
     input:
         expand(
-            "{{set}}/{{set}}_100kbdown_encode_{cells}_{tad}_hic.bed",
+            "{{set}}/{{set}}_100bpdown_encode_{cells}_{tad}_hic.bed",
             cells=CELLS,
             tad=TAD,
         ),
     output:
-        "{set}/{set}_100kbdown_HIC.bed",
+        temp("{set}/{set}_100bpdown_HIC.bed"),
     shell:
         "paste {input} > {output}"
 
 
 # micro syntenic regions
-rule microsynteny_100kbdown:
+rule microsynteny_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         hic="annotations/synteny/microsynteny.bed",
     conda:
         "envs/SV.yml"
     output:
-        o1="{set}/{set}_100kbdown_microsynteny.bed",
+        o1=temp("{set}/{set}_100bpdown_microsynteny.bed"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla scripts/annotateHIC.R stdin {output.o1}
         """
 
 
-rule ccr_100kbdown:
+rule ccr_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/ccr/ccrs.all.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_ccr_mean.bed",
+        temp("{set}/{set}_100bpdown_ccr_mean.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o max > {output}
@@ -1491,14 +1491,14 @@ rule ccr_100kbdown:
 
 
 # directionality index of HIC data from genomegitar database
-rule genomegitar1_100kbdown:
+rule genomegitar1_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/genomegitar/{gg}/DI_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100kbdown_genomegitar_{gg}.bed"),
+        t1=temp("{set}/{set}_100bpdown_genomegitar_{gg}.bed"),
     shell:
         """
         bedtools map -a {input.bed} \
@@ -1506,49 +1506,49 @@ rule genomegitar1_100kbdown:
         """
 
 
-rule genomegitar2_100kbdown:
+rule genomegitar2_100bpdown:
     input:
-        expand("{{set}}/{{set}}_100kbdown_genomegitar_{gg}.bed", gg=genomegitars),
+        expand("{{set}}/{{set}}_100bpdown_genomegitar_{gg}.bed", gg=genomegitars),
     output:
-        temp("{set}/{set}_100kbdown_DI.bed"),
+        temp("{set}/{set}_100bpdown_DI.bed"),
     shell:
         "paste {input} > {output}"
 
 
-rule genomegitar3_100kbdown:
+rule genomegitar3_100bpdown:
     input:
-        "{set}/{set}_100kbdown_DI.bed",
+        "{set}/{set}_100bpdown_DI.bed",
     output:
-        maxgg="{set}/{set}_100kbdown_DI_max.bed",
-        mingg="{set}/{set}_100kbdown_DI_min.bed",
+        maxgg=temp("{set}/{set}_100bpdown_DI_max.bed"),
+        mingg=temp("{set}/{set}_100bpdown_DI_min.bed"),
     shell:
         """
         cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i<m)m=$i;print m}}' > {output.mingg}
         cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i>m)m=$i;print m}}' > {output.maxgg}"""
 
 
-rule MPC_100kbdown:
+rule MPC_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/MPC/transcript_constraints_hg38liftover.bg.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_MPC_mean.bed",
+        temp("{set}/{set}_100bpdown_MPC_mean.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o mean > {output}
         """
 
 
-rule RemapTF_100kbdown:
+rule RemapTF_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/ReMap/ReMap2_overlapTF_hg38.bg.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_remapTF_mean.bed",
+        temp("{set}/{set}_100bpdown_remapTF_mean.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
@@ -1556,37 +1556,37 @@ rule RemapTF_100kbdown:
 
 
 # various regulatory and epigenetic features from ENCODE (see ENCODE list)
-rule encode_100kbdown:
+rule encode_100bpdown:
     input:
-        merg="beds/{set}/{set}_100kbdown_nchr_merged.bed",
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        merg="beds/{set}/{set}_100bpdown_nchr_merged.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/encode/{encodes}/{encodes}_merged_90quant.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_encode_{encodes}_mean.bed",
+        temp("{set}/{set}_100bpdown_encode_{encodes}_mean.bed"),
     shell:
         "tabix {input.anno} -R {input.merg} | cat annotations/dummy5_nchr.bed - | bedtools map -a {input.bed} -b - -c 4,4 -o max,sum > {output}"
 
 
-rule encode2_100kbdown:
+rule encode2_100bpdown:
     input:
-        expand("{{set}}/{{set}}_100kbdown_encode_{encodes}_mean.bed", encodes=ENCODES),
+        expand("{{set}}/{{set}}_100bpdown_encode_{encodes}_mean.bed", encodes=ENCODES),
     output:
-        "{set}/{set}_100kbdown_encode.bed",
+        temp("{set}/{set}_100bpdown_encode.bed"),
     shell:
         "paste {input} > {output}"
 
 
 # genome states infered from chromHMM
-rule chromHMM_MAX_100kbdown:
+rule chromHMM_MAX_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown_nchr.bed",
+        bed="beds/{set}/{set}_100bpdown_nchr.bed",
         anno="annotations/chromhmm/chromHMM_GRCh38.bg.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_chromHMM_max.bed",
+        temp("{set}/{set}_100bpdown_chromHMM_max.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(cat annotations/dummy_chrhmm.bed; tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max; done < {input.bed}) > {output}
@@ -1596,79 +1596,79 @@ rule chromHMM_MAX_100kbdown:
 #  bedtools map -a {input.bed} -b stdin -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max > {output}
 
 
-rule Fantom5_counts_100kbdown:
+rule Fantom5_counts_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/fantom5/F5.hg38.enhancers_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_f5_counts.bed",
+        temp("{set}/{set}_100bpdown_f5_counts.bed"),
     shell:
         """
         bedtools coverage -a {input.bed} -b {input.anno} -counts  > {output}
         """
 
 
-rule HI_100kbdown:
+rule HI_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/DDD_HI/hg38_HI_Predictions_version3_sort.bed",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_dddhi.bed",
+        temp("{set}/{set}_100bpdown_dddhi.bed"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 5 -o max > {output}
         """
 
 
-rule deepc_100kbdown:
+rule deepc_100bpdown:
     input:
-        bed="beds/{set}/{set}_100kbdown.bed",
+        bed="beds/{set}/{set}_100bpdown.bed",
         anno="annotations/deepc/saliencies_merged_gm12878_5kb_10bp.bed.gz",
     conda:
         "envs/SV.yml"
     output:
-        "{set}/{set}_100kbdown_deepc.bed",
+        temp("{set}/{set}_100bpdown_deepc.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
-rule complete_script_100kbdown:
+rule complete_script_100bpdown:
     input:
-        cadd="{set}/{set}_100kbdown_CADD_PC_PhyloP_maxsum.bed",
-        cadd2="{set}/{set}_100kbdown_cadd2_count.bed",
-        ccr="{set}/{set}_100kbdown_ccr_mean.bed",
-        chromHMM="{set}/{set}_100kbdown_chromHMM_max.bed",
-        ctcf="{set}/{set}_100kbdown_ctcf.bed",
-        di_min="{set}/{set}_100kbdown_DI_min.bed",
-        di_max="{set}/{set}_100kbdown_DI_max.bed",
-        encode="{set}/{set}_100kbdown_encode.bed",
-        ep="{set}/{set}_100kbdown_EP.bed",
-        fire="{set}/{set}_100kbdown_fire.bed",
-        gc="{set}/{set}_100kbdown_gc.bed",
-        gm="{set}/{set}_100kbdown_genemodel.bed",
-        gerp="{set}/{set}_100kbdown_gerp_mean.bed",
-        gerp2="{set}/{set}_100kbdown_gerp2_count.bed",
-        hic="{set}/{set}_100kbdown_HIC.bed",
-        hesc="{set}/{set}_100kbdown_HIC_hESC.bed",
-        microsyn="{set}/{set}_100kbdown_microsynteny.bed",
-        mpc="{set}/{set}_100kbdown_MPC_mean.bed",
-        pli="{set}/{set}_100kbdown_pli.bed",
-        remapTF="{set}/{set}_100kbdown_remapTF_mean.bed",
-        f5="{set}/{set}_100kbdown_f5_counts.bed",
-        hi="{set}/{set}_100kbdown_dddhi.bed",
-        deepc="{set}/{set}_100kbdown_deepc.bed",
-        ultrac="{set}/{set}_100kbdown_ultraconserved.bed",
-        g_dist="{set}/{set}_100kbdown_genetic_dist.bed",
-        linsight="{set}/{set}_100kbdown_linsight_sum.bed",
+        cadd="{set}/{set}_100bpdown_CADD_PC_PhyloP_maxsum.bed",
+        cadd2="{set}/{set}_100bpdown_cadd2_count.bed",
+        ccr="{set}/{set}_100bpdown_ccr_mean.bed",
+        chromHMM="{set}/{set}_100bpdown_chromHMM_max.bed",
+        ctcf="{set}/{set}_100bpdown_ctcf.bed",
+        di_min="{set}/{set}_100bpdown_DI_min.bed",
+        di_max="{set}/{set}_100bpdown_DI_max.bed",
+        encode="{set}/{set}_100bpdown_encode.bed",
+        ep="{set}/{set}_100bpdown_EP.bed",
+        fire="{set}/{set}_100bpdown_fire.bed",
+        gc="{set}/{set}_100bpdown_gc.bed",
+        gm="{set}/{set}_100bpdown_genemodel.bed",
+        gerp="{set}/{set}_100bpdown_gerp_mean.bed",
+        gerp2="{set}/{set}_100bpdown_gerp2_count.bed",
+        hic="{set}/{set}_100bpdown_HIC.bed",
+        hesc="{set}/{set}_100bpdown_HIC_hESC.bed",
+        microsyn="{set}/{set}_100bpdown_microsynteny.bed",
+        mpc="{set}/{set}_100bpdown_MPC_mean.bed",
+        pli="{set}/{set}_100bpdown_pli.bed",
+        remapTF="{set}/{set}_100bpdown_remapTF_mean.bed",
+        f5="{set}/{set}_100bpdown_f5_counts.bed",
+        hi="{set}/{set}_100bpdown_dddhi.bed",
+        deepc="{set}/{set}_100bpdown_deepc.bed",
+        ultrac="{set}/{set}_100bpdown_ultraconserved.bed",
+        g_dist="{set}/{set}_100bpdown_genetic_dist.bed",
+        linsight="{set}/{set}_100bpdown_linsight_sum.bed",
         header="annotations/header.txt",
     output:
-        "{set}/matrix_100kbdown.bed",
+        "{set}/matrix_100bpdown.bed",
     conda:
         "envs/SV.yml"
     shell:
@@ -1686,8 +1686,8 @@ rule complete_script_100kbdown:
 rule scoring:
     input:
         span="{set}/matrix.bed",
-        flank_up="{set}/matrix_100kbdown.bed",
-        flank_down="{set}/matrix_100kbup.bed",
+        flank_up="{set}/matrix_100bpdown.bed",
+        flank_down="{set}/matrix_100bpup.bed",
     conda:
         "envs/SV.yml"
     output:
