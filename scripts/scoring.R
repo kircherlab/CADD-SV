@@ -52,8 +52,8 @@ caddsv=function(x){
   k=list()
   y=list()
   k[[1]]=cadd.sv.read(x,z="")
-  k[[2]]=cadd.sv.read(x,z="_100kbup")
-  k[[3]]=cadd.sv.read(x,z="_100kbdown")
+  k[[2]]=cadd.sv.read(x,z="_100bpup")
+  k[[3]]=cadd.sv.read(x,z="_100bpdown")
   k[[4]]=k[[2]]+k[[3]]
   k[[4]][,114]=apply(cbind(k[[2]][,114],k[[3]][,114]),1,min)
   k[[4]][,115]=apply(cbind(k[[2]][,115],k[[3]][,115]),1,min)
