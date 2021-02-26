@@ -27,7 +27,9 @@ for(i in which(gn>0)){
 
 res=vector()
 for(i in which(as.numeric(summary(score)[,1])>0)){
-  res[i]=max(unlist(score[[i]]))
+  if(length(unlist(score[[i]]))>0){
+    res[i]=max(unlist(score[[i]]))
+    }else(res[i]=0)
 }
 
 a1=which(res>0)
