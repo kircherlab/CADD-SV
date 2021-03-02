@@ -60,9 +60,9 @@ To start the pipeline:
 ```bash
 conda activate run.caddsv
 # dry run to see if everything works
-snakemake  --use-conda --configfile config.yml -n
+snakemake  --use-conda --configfile config.yml -j 4 -n
 # run the pipeline
-snakemake  --use-conda --configfile config.yml
+snakemake  --use-conda --configfile config.yml -j 4
 ```
 
 ## Output files
