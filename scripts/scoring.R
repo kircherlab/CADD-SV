@@ -52,8 +52,8 @@ caddsv=function(x){
   k=list()
   y=list()
   k[[1]]=cadd.sv.read(x,z="")
-  k[[2]]=cadd.sv.read(x,z="_100bpup")
-  k[[3]]=cadd.sv.read(x,z="_100bpdown")
+  k[[2]]=cadd.sv.read(x,z="_100kbup")
+  k[[3]]=cadd.sv.read(x,z="_100kbdown")
   k[[4]]=k[[2]]+k[[3]]
   k[[4]][,114]=apply(cbind(k[[2]][,114],k[[3]][,114]),1,min)
   k[[4]][,115]=apply(cbind(k[[2]][,115],k[[3]][,115]),1,min)
@@ -72,7 +72,7 @@ cdel.model=readRDS("models/cdelmodelRF.RDS")
 hdel.model=readRDS("models/hdelmodelRF.RDS")
 cins.model=readRDS("models/cinsmodelRF.RDS")
 hins.model=readRDS("models/hinsmodelRF.RDS")
- #contains models and scaling parameters
+#contains models and scaling parameters
 
 
 tbs=caddsv(name.caddsv) #to be scored
@@ -111,27 +111,16 @@ dups=DUP
 #scaling according to gnomad healthy population distribution
 
 for(i in 4:131){
-     dels[[1]][,i]=scale(c(DEL[[1]][,i]),center=gnomad.scale[[1]][[i]][[2]],scale=gnomad.scale[[1]][[i]][[3]])
-     dels[[2]][,i]=scale(c(DEL[[2]][,i]),center=gnomad.scale[[2]][[i]][[2]],scale=gnomad.scale[[2]][[i]][[3]])
-     inss[[1]][,i]=scale(c(INS[[1]][,i]),center=gnomad.scale[[3]][[i]][[2]],scale=gnomad.scale[[3]][[i]][[3]])
-     inss[[2]][,i]=scale(c(INS[[2]][,i]),center=gnomad.scale[[4]][[i]][[2]],scale=gnomad.scale[[4]][[i]][[3]])
-     dups[[1]][,i]=scale(c(DUP[[1]][,i]),center=gnomad.scale[[5]][[i]][[2]],scale=gnomad.scale[[5]][[i]][[3]])
-     dups[[2]][,i]=scale(c(DUP[[2]][,i]),center=gnomad.scale[[6]][[i]][[2]],scale=gnomad.scale[[6]][[i]][[3]])
-     
+  dels[[1]][,i]=scale(c(DEL[[1]][,i]),center=gnomad.scale[[1]][[i]][[2]],scale=gnomad.scale[[1]][[i]][[3]])
+  dels[[2]][,i]=scale(c(DEL[[2]][,i]),center=gnomad.scale[[2]][[i]][[2]],scale=gnomad.scale[[2]][[i]][[3]])
+  inss[[1]][,i]=scale(c(INS[[1]][,i]),center=gnomad.scale[[3]][[i]][[2]],scale=gnomad.scale[[3]][[i]][[3]])
+  inss[[2]][,i]=scale(c(INS[[2]][,i]),center=gnomad.scale[[4]][[i]][[2]],scale=gnomad.scale[[4]][[i]][[3]])
+  dups[[1]][,i]=scale(c(DUP[[1]][,i]),center=gnomad.scale[[5]][[i]][[2]],scale=gnomad.scale[[5]][[i]][[3]])
+  dups[[2]][,i]=scale(c(DUP[[2]][,i]),center=gnomad.scale[[6]][[i]][[2]],scale=gnomad.scale[[6]][[i]][[3]])
+  
 }
- 
+
 #scoring DEL INS and DUPs according to the appropriate model
-library(randomForest)
-del1=predict(cdel.model,dels[[1]][,4:131])*(-1)
-del2=predict(hdel.model,dels[[2]][,4:131])*(-1)
-ins1=predict(hins.model,inss[[1]][,4:131])*(-1)
-ins2=predict(cins.model,inss[[2]][,4:131])*(-1)
-dup1=predict(cdel.model,dups[[1]][,4:131])*(-1)
-dup2=predict(hdel.model,dups[[2]][,4:131])*(-1)
-
-
-
-#ranking according to gnomad healthy cohort distribution
 ranker=function(x,gnomad) {
   k=x
   for(i in 1:length(k))
@@ -141,23 +130,42 @@ ranker=function(x,gnomad) {
   return(k)
 }
 
-rank.del1=ranker((-1)*del1,gnomad.rank[[1]])
-rank.del2=ranker((-1)*del2,gnomad.rank[[2]])
-rank.ins1=ranker((-1)*ins1,gnomad.rank[[3]])
-rank.ins2=ranker((-1)*ins2,gnomad.rank[[4]])
-rank.dup1=ranker((-1)*dup1,gnomad.rank[[5]])
-rank.dup2=ranker((-1)*dup2,gnomad.rank[[6]])
+library(randomForest)
+if(dim(dels[[1]])[1]>0){
+  del1=predict(cdel.model,dels[[1]][,4:131])*(-1)
+  del2=predict(hdel.model,dels[[2]][,4:131])*(-1)
+  rank.del1=ranker((-1)*del1,gnomad.rank[[1]])
+  rank.del2=ranker((-1)*del2,gnomad.rank[[2]])
+  del=apply(cbind(rank.del1,rank.del2),1,min)
+  rank.del=1-ranker(del,gnomad.rank2[[1]])
+  
+  
+  
+}
+if(dim(inss[[1]])[1]>0){
+  ins1=predict(hins.model,inss[[1]][,4:131])*(-1)
+  ins2=predict(cins.model,inss[[2]][,4:131])*(-1)
+  rank.ins1=ranker((-1)*ins1,gnomad.rank[[3]])*(-1)
+  rank.ins2=ranker((-1)*ins2,gnomad.rank[[4]])*(-1)
+  ins=apply(cbind(rank.ins1,rank.ins2),1,min)
+  rank.ins=1-ranker(ins,gnomad.rank2[[2]])
+  
+  
+  
+}
+if(dim(dups[[1]])[1]>0){
+  dup1=predict(cdel.model,dups[[1]][,4:131])*(-1)
+  dup2=predict(hdel.model,dups[[2]][,4:131])*(-1)
+  rank.dup1=ranker((-1)*dup1,gnomad.rank[[5]])*(-1)
+  rank.dup2=ranker((-1)*dup2,gnomad.rank[[6]])*(-1)
+  dup=1-apply(cbind(rank.dup1,rank.dup2),1,min)
+  rank.dup=1-ranker(dup,gnomad.rank2[[3]])
+
+}
 
 
-del=apply(cbind(rank.del1,rank.del2),1,max)
-ins=apply(cbind(rank.ins1,rank.ins2),1,max)
-dup=apply(cbind(rank.dup1,rank.dup2),1,max)
 
 
-
-rank.del=ranker(del,gnomad.rank2[[1]])
-rank.ins=ranker(ins,gnomad.rank2[[2]])
-rank.dup=ranker(dup,gnomad.rank2[[3]])
 
 ##fixing single DUP DEL INS transformation bug
 
@@ -170,31 +178,39 @@ if(dim(id)[2]==5){
   z.ins=id[which(id[,4]=="INS"),5]
   z.dup=id[which(id[,4]=="DUP"),5]
 } else {
-  z.del=paste(name.caddsv,paste(id[,1],paste(id[,2],id[,3],sep="-"),sep=":"),sep="_")[which(id[,4]=="DEL")]
-  z.ins=paste(name.caddsv,paste(id[,1],paste(id[,2],id[,3],sep="-"),sep=":"),sep="_")[which(id[,4]=="INS")]
-  z.dup=paste(name.caddsv,paste(id[,1],paste(id[,2],id[,3],sep="-"),sep=":"),sep="_")[which(id[,4]=="DUP")]
-  
+  z.del=paste(name.caddsv,paste(id[,1],paste(as.numeric(id[,2]),as.numeric(id[,3]),sep="-"),sep=":"),sep="_")[which(id[,4]=="DEL")]
+  z.ins=paste(name.caddsv,paste(id[,1],paste(as.numeric(id[,2]),as.numeric(id[,3]),sep="-"),sep=":"),sep="_")[which(id[,4]=="INS")]
+  z.dup=paste(name.caddsv,paste(id[,1],paste(as.numeric(id[,2]),as.numeric(id[,3]),sep="-"),sep=":"),sep="_")[which(id[,4]=="DUP")]
+
 }
-  
-d=cbind(dels2[,1:3],"DEL",z.del,rank.del,del1,del2,dels2[,4:131])
-dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,dup2,dups2[,4:131])
-inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,inss2[,4:131])
+
+header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","raw-score-flank","rawscore1","rawscore2",colnames(dels[[1]])[4:131])
 
 
-
-header=c(colnames(dels[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
-
+if(dim(dels[[1]])[1]>0){
+d=cbind(dels2[,1:3],"DEL",z.del,rank.del,del1,del2,rank.del1,rank.del2,dels2[,4:131])
 colnames(d)=header
-colnames(inserts)=header
-colnames(dupli)=header
-
 d[which(d[,1]==0),1]="X"
+
+}else(d=data.frame())
+
+if(dim(dups[[1]])[1]>0){
+dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,rank.dup1,rank.dup2,dup2,dups2[,4:131])
+colnames(inserts)=header
 inserts[which(inserts[,1]==0),1]="X"
+
+}else(inserts=data.frame())
+
+if(dim(inss[[1]])[1]>0){
+inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,rank.ins1,rank.ins2,inss2[,4:131])
+colnames(dupli)=header
 dupli[which(dupli[,1]==0),1]="X"
+
+}else(dupli=data.frame())
+
+
 
 write.table(rbind(d,inserts,dupli),paste("output/",name.caddsv,".score",sep=""),sep="\t",
             row.names = F, 
             col.names = F, 
             quote = F)
-
-
