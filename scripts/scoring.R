@@ -170,7 +170,7 @@ if(dim(dups[[1]])[1]>0){
 ##fixing single DUP DEL INS transformation bug
 
 dels2=data.frame(dels[[1]])
-inss2=data.frame(inss[[1]])
+inss2=data.frame(inss[[2]])
 dups2=data.frame(dups[[1]])
 
 if(dim(id)[2]==5){
