@@ -196,17 +196,17 @@ d[which(d[,1]==0),1]="X"
 
 if(dim(dups[[1]])[1]>0){
 dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,rank.dup1,rank.dup2,dup2,dups2[,4:131])
-colnames(inserts)=header
-inserts[which(inserts[,1]==0),1]="X"
-
-}else(inserts=data.frame())
-
-if(dim(inss[[1]])[1]>0){
-inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,rank.ins1,rank.ins2,inss2[,4:131])
 colnames(dupli)=header
 dupli[which(dupli[,1]==0),1]="X"
 
 }else(dupli=data.frame())
+
+if(dim(inss[[1]])[1]>0){
+inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,rank.ins1,rank.ins2,inss2[,4:131])
+colnames(inserts)=header
+inserts[which(inserts[,1]==0),1]="X"
+
+}else(inserts=data.frame())
 
 
 
