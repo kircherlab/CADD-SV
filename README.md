@@ -9,7 +9,7 @@ Here we describe CADD-SV, a method to retrieve a wide set of annotations in the 
 
 ### Conda
 
-The pipeline depends on [Snakemake](https://snakemake.readthedocs.io/en/stable/), a workflow management system that wraps up all scripts and runs them highly automated, in various environments (workstations, clusters, grid, or cloud). Further, we use Conda as software/dependency managment tool. Conda can install snakemake and all neccessary software with its dependencies automatically. Conda installation guidlines can be found here:
+The pipeline depends on [Snakemake](https://snakemake.readthedocs.io/en/stable/), a workflow management system that wraps up all scripts and runs them highly automated, in various environments (workstations, clusters, grid, or cloud). Further, we use Conda as software/dependency management tool. Conda can install snakemake and all neccessary software with its dependencies automatically. Conda installation guidelines can be found here:
 
 https://conda.io/projects/conda/en/latest/user-guide/install/index.html
 
