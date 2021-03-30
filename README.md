@@ -77,12 +77,12 @@ Further information about individual annotations are kept in a subfolder named a
 
 ##### Integrated Scores
 CADD (https://krishna.gs.washington.edu/download/CADD/bigWig/) \
-LINSIGHT (compgen.cshl.edu/LINSIGHT/LINSIGHT.bw) 
+LINSIGHT (http://compgen.cshl.edu/LINSIGHT/LINSIGHT.bw) 
 
 ##### Species conservation and constraint metrics
 PhastCons (http://hgdownload.cse.ucsc.edu/goldenpath/hg38/) \
 Syntenic regions (http://webclu.bio.wzw.tum.de/cgi-bin/syntenymapper/get-species-list.py) \
-gerp score (http://mendel.stanford.edu/SidowLab/downloads/gerp/) 
+GERP score (http://mendel.stanford.edu/SidowLab/downloads/gerp/) 
 
 ##### Population and disease constraint metrics
 pLI score (ftp://ftp.broadinstitute.org/pub/ExAC_release/release1/manuscript_data/forweb_cleaned_exac_r03_march16_z_data_pLI.txt.gz) \
