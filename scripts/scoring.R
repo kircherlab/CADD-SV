@@ -184,7 +184,7 @@ if(dim(id)[2]==5){
 
 }
 
-header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","raw-score-flank","rawscore1","rawscore2",colnames(dels[[1]])[4:131])
+header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
 
 
 if(dim(dels[[1]])[1]>0){
