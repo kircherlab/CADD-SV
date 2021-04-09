@@ -52,8 +52,8 @@ caddsv=function(x){
   k=list()
   y=list()
   k[[1]]=cadd.sv.read(x,z="")
-  k[[2]]=cadd.sv.read(x,z="_100bpup")
-  k[[3]]=cadd.sv.read(x,z="_100bpdown")
+  k[[2]]=cadd.sv.read(x,z="_100kbup")
+  k[[3]]=cadd.sv.read(x,z="_100kbdown")
   k[[4]]=k[[2]]+k[[3]]
   k[[4]][,114]=apply(cbind(k[[2]][,114],k[[3]][,114]),1,min)
   k[[4]][,115]=apply(cbind(k[[2]][,115],k[[3]][,115]),1,min)
@@ -147,7 +147,7 @@ if(dim(inss[[1]])[1]>0){
   ins2=predict(cins.model,inss[[2]][,4:131])*(-1)
   rank.ins1=ranker((-1)*ins1,gnomad.rank[[3]])*(-1)
   rank.ins2=ranker((-1)*ins2,gnomad.rank[[4]])*(-1)
-  ins=apply(cbind(rank.ins1,rank.ins2),1,min)
+  ins=apply(cbind(rank.ins1,rank.ins2),1,min)*(-1)
   rank.ins=1-ranker(ins,gnomad.rank2[[2]])
   
   
@@ -158,7 +158,7 @@ if(dim(dups[[1]])[1]>0){
   dup2=predict(hdel.model,dups[[2]][,4:131])*(-1)
   rank.dup1=ranker((-1)*dup1,gnomad.rank[[5]])*(-1)
   rank.dup2=ranker((-1)*dup2,gnomad.rank[[6]])*(-1)
-  dup=1-apply(cbind(rank.dup1,rank.dup2),1,min)
+  dup=apply(cbind(rank.dup1,rank.dup2),1,min)*(-1)
   rank.dup=1-ranker(dup,gnomad.rank2[[3]])
 
 }
@@ -170,7 +170,7 @@ if(dim(dups[[1]])[1]>0){
 ##fixing single DUP DEL INS transformation bug
 
 dels2=data.frame(dels[[1]])
-inss2=data.frame(inss[[2]])
+inss2=data.frame(inss[[1]])
 dups2=data.frame(dups[[1]])
 
 if(dim(id)[2]==5){
@@ -188,24 +188,22 @@ header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","
 
 
 if(dim(dels[[1]])[1]>0){
-d=cbind(dels2[,1:3],"DEL",z.del,rank.del,del1,del2,rank.del1,rank.del2,dels2[,4:131])
+d=cbind(dels2[,1:3],"DEL",z.del,rank.del,del1,del2,dels2[,4:131])
 colnames(d)=header
 d[which(d[,1]==0),1]="X"
 
 }else(d=data.frame())
 
 if(dim(dups[[1]])[1]>0){
-dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,rank.dup1,rank.dup2,dup2,dups2[,4:131])
+dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,dup2,dups2[,4:131])
 colnames(dupli)=header
 dupli[which(dupli[,1]==0),1]="X"
-
 }else(dupli=data.frame())
 
 if(dim(inss[[1]])[1]>0){
-inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,rank.ins1,rank.ins2,inss2[,4:131])
+inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,inss2[,4:131])
 colnames(inserts)=header
 inserts[which(inserts[,1]==0),1]="X"
-
 }else(inserts=data.frame())
 
 
@@ -214,3 +212,4 @@ write.table(rbind(d,inserts,dupli),paste("output/",name.caddsv,".score",sep=""),
             row.names = F, 
             col.names = F, 
             quote = F)
+
