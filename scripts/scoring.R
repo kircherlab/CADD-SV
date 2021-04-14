@@ -54,11 +54,12 @@ caddsv=function(x){
   k[[1]]=cadd.sv.read(x,z="")
   k[[2]]=cadd.sv.read(x,z="_100bpup")
   k[[3]]=cadd.sv.read(x,z="_100bpdown")
-  k[[4]]=k[[2]]+k[[3]]
+  k[[5]]=k[[3]][match(k[[3]][,3]-100,k[[1]][,3]),]##reordering sorted 100bpdown
+  k[[4]]=k[[2]]+k[[5]]
   k[[4]][,114]=apply(cbind(k[[2]][,114],k[[3]][,114]),1,min)
   k[[4]][,115]=apply(cbind(k[[2]][,115],k[[3]][,115]),1,min)
   k[[4]][,116]=apply(cbind(k[[2]][,116],k[[3]][,116]),1,min)
-  y[[1]]=k[[1]]
+   y[[1]]=k[[1]]
   y[[2]]=k[[4]]
   return(y)
 }
