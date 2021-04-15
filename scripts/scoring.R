@@ -54,11 +54,17 @@ caddsv=function(x){
   k[[1]]=cadd.sv.read(x,z="")
   k[[2]]=cadd.sv.read(x,z="_100bpup")
   k[[3]]=cadd.sv.read(x,z="_100bpdown")
-  k[[5]]=k[[3]][match(k[[3]][,3]-100,k[[1]][,3]),]##reordering sorted 100bpdown
+  z1=match(k[[3]][,3]-100,k[[1]][,3])
+  z2=match(k[[3]][,3]-101,k[[1]][,3])
+  z=cbind(z1,z2)
+  z[is.na(z)] <- 0
+  t=apply(z,1,max)
+  
+  k[[5]]=k[[3]][t,]##reordering sorted 100bpdown
   k[[4]]=k[[2]]+k[[5]]
-  k[[4]][,114]=apply(cbind(k[[2]][,114],k[[3]][,114]),1,min)
-  k[[4]][,115]=apply(cbind(k[[2]][,115],k[[3]][,115]),1,min)
-  k[[4]][,116]=apply(cbind(k[[2]][,116],k[[3]][,116]),1,min)
+  k[[4]][,114]=apply(cbind(k[[2]][,114],k[[3]][,121]),1,min)
+  k[[4]][,115]=apply(cbind(k[[2]][,115],k[[3]][,122]),1,min)
+  k[[4]][,116]=apply(cbind(k[[2]][,116],k[[3]][,123]),1,min)
    y[[1]]=k[[1]]
   y[[2]]=k[[4]]
   return(y)
@@ -120,6 +126,13 @@ for(i in 4:131){
   dups[[2]][,i]=scale(c(DUP[[2]][,i]),center=gnomad.scale[[6]][[i]][[2]],scale=gnomad.scale[[6]][[i]][[3]])
   
 }
+
+dels[[1]][is.na(dels[[1]])] <- 0
+dels[[2]][is.na(dels[[2]])] <- 0
+inss[[1]][is.na(inss[[1]])] <- 0
+inss[[2]][is.na(inss[[2]])] <- 0
+dups[[1]][is.na(dups[[1]])] <- 0
+dups[[2]][is.na(dups[[2]])] <- 0
 
 #scoring DEL INS and DUPs according to the appropriate model
 ranker=function(x,gnomad) {
