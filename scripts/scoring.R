@@ -54,8 +54,8 @@ caddsv=function(x){
   k[[1]]=cadd.sv.read(x,z="")
   k[[2]]=cadd.sv.read(x,z="_100bpup")
   k[[3]]=cadd.sv.read(x,z="_100bpdown")
-  z1=match(k[[1]][,3],k[[3]][,3]-100)
-  z2=match(k[[1]][,3],k[[3]][,3]-101)
+  z1=match(paste(k[[1]][,1],k[[1]][,3],sep="_"),paste(k[[3]][,1],k[[3]][,3]-100,sep="_"))
+  z2=match(paste(k[[1]][,1],k[[1]][,3],sep="_"),paste(k[[3]][,1],k[[3]][,3]-101,sep="_"))
   z=cbind(z1,z2)
   z[is.na(z)] <- 0
   t=apply(z,1,max)
