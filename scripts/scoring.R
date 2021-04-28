@@ -62,9 +62,9 @@ caddsv=function(x){
   
   k[[5]]=k[[3]][t,]##reordering sorted 100bpdown
   k[[4]]=k[[2]]+k[[5]]
-  k[[4]][,114]=apply(cbind(k[[2]][,121],k[[3]][,121]),1,min)
-  k[[4]][,115]=apply(cbind(k[[2]][,122],k[[3]][,122]),1,min)
-  k[[4]][,116]=apply(cbind(k[[2]][,123],k[[3]][,123]),1,min)
+  k[[4]][,121]=apply(cbind(k[[2]][,121],k[[3]][,121]),1,min)
+  k[[4]][,122]=apply(cbind(k[[2]][,122],k[[3]][,122]),1,min)
+  k[[4]][,123]=apply(cbind(k[[2]][,123],k[[3]][,123]),1,min)
    y[[1]]=k[[1]]
   y[[2]]=k[[4]]
   return(y)
