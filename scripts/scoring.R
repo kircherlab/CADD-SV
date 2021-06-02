@@ -173,7 +173,8 @@ if(dim(dups[[1]])[1]>0){
   rank.dup1=ranker((-1)*dup1,gnomad.rank[[5]])*(-1)
   rank.dup2=ranker((-1)*dup2,gnomad.rank[[6]])*(-1)
   dup=apply(cbind(rank.dup1,rank.dup2),1,min)*(-1)
-  rank.dup=1-ranker(dup,gnomad.rank2[[3]])
+  #rank.dup=1-ranker(dup,gnomad.rank2[[3]])
+  rank.dup=1+rank.dup1
 
 }
 
