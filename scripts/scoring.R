@@ -151,7 +151,7 @@ if(dim(dels[[1]])[1]>0){
   rank.del1=ranker(del1,gnomad.rank[[1]])
   rank.del2=ranker(del2,gnomad.rank[[2]])
   del=apply(cbind(rank.del1,rank.del2),1,max)
-  rank.del=1-ranker(del,gnomad.rank2[[1]])
+  rank.del=ranker(del,gnomad.rank2[[1]])
   
 }
 
@@ -162,7 +162,7 @@ if(dim(inss[[1]])[1]>0){
   rank.ins1=ranker(ins1,gnomad.rank[[3]])
   rank.ins2=ranker(ins2,gnomad.rank[[4]])
   ins=apply(cbind(rank.ins1,rank.ins2),1,max)
-  rank.ins=1-ranker(ins,gnomad.rank2[[2]])
+  rank.ins=ranker(ins,gnomad.rank2[[2]])
   
 }
 
@@ -173,7 +173,7 @@ if(dim(dups[[1]])[1]>0){
   rank.dup1=ranker(dup1,gnomad.rank[[5]])
   rank.dup2=ranker(dup2,gnomad.rank[[6]])
   dup=apply(cbind(rank.dup1,rank.dup2),1,max)
-  rank.dup=1-ranker(dup,gnomad.rank2[[3]])
+  rank.dup=ranker(dup,gnomad.rank2[[3]])
 
 }
 
