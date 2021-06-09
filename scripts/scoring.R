@@ -153,9 +153,9 @@ if(dim(dels[[1]])[1]>0){
   del=apply(cbind(rank.del1,rank.del2),1,max)
   rank.del=1-ranker(del,gnomad.rank2[[1]])
   
-  
-  
 }
+
+
 if(dim(inss[[1]])[1]>0){
   ins1=predict(hins.model,inss[[1]][,4:131])*(-1)
   ins2=predict(cins.model,inss[[2]][,4:131])*(-1)
@@ -164,17 +164,16 @@ if(dim(inss[[1]])[1]>0){
   ins=apply(cbind(rank.ins1,rank.ins2),1,max)
   rank.ins=1-ranker(ins,gnomad.rank2[[2]])
   
-  
-  
 }
+
+
 if(dim(dups[[1]])[1]>0){
   dup1=predict(cdel.model,dups[[1]][,4:131])*(-1)
   dup2=predict(hdel.model,dups[[2]][,4:131])*(-1)
   rank.dup1=ranker(dup1,gnomad.rank[[5]])
   rank.dup2=ranker(dup2,gnomad.rank[[6]])
   dup=apply(cbind(rank.dup1,rank.dup2),1,max)
-  #rank.dup=1-ranker(dup,gnomad.rank2[[3]])
-  rank.dup=1+rank.dup1
+  rank.dup=1-ranker(dup,gnomad.rank2[[3]])
 
 }
 
