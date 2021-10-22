@@ -110,10 +110,10 @@ rule CTCF:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_ctcf.bed"),
+        temp("{set}/{set}_ctcf.bed"),
     shell:
         """
-        bedtools coverage -b {input.anno} -a {input.bed} > {output.t1}
+        bedtools coverage -b {input.anno} -a {input.bed} > {output}
         """
 
 
@@ -124,10 +124,10 @@ rule ultraconserved:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_ultraconserved.bed"),
+        temp("{set}/{set}_ultraconserved.bed"),
     shell:
         """
-        bedtools coverage -b {input.anno} -a {input.bed} > {output.t1}
+        bedtools coverage -b {input.anno} -a {input.bed} > {output}
         """
 
 
@@ -139,10 +139,10 @@ rule GC:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_gc.bed"),
+        temp("{set}/{set}_gc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output.t1}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
         """
 
 
@@ -155,10 +155,10 @@ rule gene_model_tmp:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/gm_tmp.bed"),
+        temp("{set}/gm_tmp.bed"),
     shell:
         """
-        tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output.t1}
+        tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output}
         """
 
 
@@ -248,7 +248,7 @@ rule cadd2:
         temp("{set}/{set}_cadd2_count.bed"),
     shell:
         """
-        (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | wc -l); done < {input.bed}) > {output}
         """
 
 
@@ -266,7 +266,7 @@ rule gerp:
         temp("{set}/{set}_gerp_mean.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
         """
 
 
@@ -280,7 +280,7 @@ rule gerp2:
         temp("{set}/{set}_gerp2_count.bed"),
     shell:
         """
-        (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy5_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | wc -l); done < {input.bed}) > {output}
         """
 
 
@@ -295,7 +295,7 @@ rule LINSIGHT:
         temp("{set}/{set}_linsight_sum.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o sum; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk '{{ total+=$4 }}END{{ printf("%f",total) }}'); done < {input.bed}) > {output}
 
         """
 
@@ -326,10 +326,10 @@ rule fire:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_fire_{celllines}.bed"),
+        temp("{set}/{set}_fire_{celllines}.bed"),
     shell:
         """
-        bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output.t1}
+        bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output}
         """
 
 
@@ -419,11 +419,11 @@ rule genomegitar1:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_genomegitar_{gg}.bed"),
+        temp("{set}/{set}_genomegitar_{gg}.bed"),
     shell:
         """
         bedtools map -a {input.bed} \
-        -b {input.anno} -c 4,4 -o max,min > {output.t1}
+        -b {input.anno} -c 4,4 -o max,min > {output}
         """
 
 
@@ -472,7 +472,7 @@ rule RemapTF:
         temp("{set}/{set}_remapTF_mean.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
         """
 
 
@@ -555,7 +555,7 @@ rule deepc:
         temp("{set}/{set}_deepc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
         """
 
 
@@ -678,7 +678,7 @@ rule GC_100bpup:
         temp("{set}/{set}_100bpup_gc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
         """
 
 
@@ -691,10 +691,10 @@ rule gene_model_tmp_100bpup:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/gm_tmp_100bpup.bed"),
+        temp("{set}/gm_tmp_100bpup.bed"),
     shell:
         """
-        tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output.t1}
+        tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output}
         """
 
 
@@ -784,7 +784,7 @@ rule cadd2_100bpup:
         temp("{set}/{set}_100bpup_cadd2_count.bed"),
     shell:
         """
-        (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | wc -l); done < {input.bed}) > {output}
         """
 
 
@@ -792,6 +792,7 @@ rule cadd2_100bpup:
 # merg="beds/{set}/{set}_merged.bed",
 
 
+## Rule calculates max, but output file is called mean
 rule gerp_100bpup:
     input:
         bed="beds/{set}/{set}_100bpup_nchr.bed",
@@ -802,7 +803,7 @@ rule gerp_100bpup:
         temp("{set}/{set}_100bpup_gerp_mean.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
         """
 
 
@@ -816,7 +817,7 @@ rule gerp2_100bpup:
         temp("{set}/{set}_100bpup_gerp2_count.bed"),
     shell:
         """
-        (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | wc -l); done < {input.bed}) > {output}
         """
 
 
@@ -831,7 +832,7 @@ rule LINSIGHT_100bpup:
         temp("{set}/{set}_100bpup_linsight_sum.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o sum; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk '{{ total+=$4 }}END{{ printf("%f",total) }}'); done < {input.bed}) > {output}        
 
         """
 
@@ -862,10 +863,10 @@ rule fire_100bpup:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100bpup_fire_{celllines}.bed"),
+        temp("{set}/{set}_100bpup_fire_{celllines}.bed"),
     shell:
         """
-        bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output.t1}
+        bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output}
         """
 
 
@@ -957,11 +958,11 @@ rule genomegitar1_100bpup:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100bpup_genomegitar_{gg}.bed"),
+        temp("{set}/{set}_100bpup_genomegitar_{gg}.bed"),
     shell:
         """
         bedtools map -a {input.bed} \
-        -b {input.anno} -c 4,4 -o max,min > {output.t1}
+        -b {input.anno} -c 4,4 -o max,min > {output}
         """
 
 
@@ -1011,7 +1012,7 @@ rule RemapTF_100bpup:
         temp("{set}/{set}_100bpup_remapTF_mean.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
         """
 
 
@@ -1094,7 +1095,7 @@ rule deepc_100bpup:
         temp("{set}/{set}_100bpup_deepc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
         """
 
 
@@ -1217,7 +1218,7 @@ rule GC_100bpdown:
         temp("{set}/{set}_100bpdown_gc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
         """
 
 
@@ -1230,10 +1231,10 @@ rule gene_model_tmp_100bpdown:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/gm_tmp_100bpdown.bed"),
+        temp("{set}/gm_tmp_100bpdown.bed"),
     shell:
         """
-        tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output.t1}
+        tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output}
         """
 
 
@@ -1323,7 +1324,7 @@ rule cadd2_100bpdown:
         temp("{set}/{set}_100bpdown_cadd2_count.bed"),
     shell:
         """
-        (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | wc -l); done < {input.bed}) > {output}
         """
 
 
@@ -1331,6 +1332,7 @@ rule cadd2_100bpdown:
 # merg="beds/{set}/{set}_merged.bed",
 
 
+# Called mean, calculates max
 rule gerp_100bpdown:
     input:
         bed="beds/{set}/{set}_100bpdown_nchr.bed",
@@ -1341,7 +1343,7 @@ rule gerp_100bpdown:
         temp("{set}/{set}_100bpdown_gerp_mean.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
         """
 
 
@@ -1355,7 +1357,7 @@ rule gerp2_100bpdown:
         temp("{set}/{set}_100bpdown_gerp2_count.bed"),
     shell:
         """
-        (while read -r line; do bedtools coverage -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -counts; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | wc -l); done < {input.bed}) > {output}
         """
 
 
@@ -1370,7 +1372,7 @@ rule LINSIGHT_100bpdown:
         temp("{set}/{set}_100bpdown_linsight_sum.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o sum; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk '{{ total+=$4 }}END{{ printf("%f",total) }}'); done < {input.bed}) > {output}
 
         """
 
@@ -1401,10 +1403,10 @@ rule fire_100bpdown:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100bpdown_fire_{celllines}.bed"),
+        temp("{set}/{set}_100bpdown_fire_{celllines}.bed"),
     shell:
         """
-        bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output.t1}
+        bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output}
         """
 
 
@@ -1498,11 +1500,11 @@ rule genomegitar1_100bpdown:
     conda:
         "envs/SV.yml"
     output:
-        t1=temp("{set}/{set}_100bpdown_genomegitar_{gg}.bed"),
+        temp("{set}/{set}_100bpdown_genomegitar_{gg}.bed"),
     shell:
         """
         bedtools map -a {input.bed} \
-        -b {input.anno} -c 4,4 -o max,min > {output.t1}
+        -b {input.anno} -c 4,4 -o max,min > {output}
         """
 
 
@@ -1551,7 +1553,7 @@ rule RemapTF_100bpdown:
         temp("{set}/{set}_100bpdown_remapTF_mean.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
         """
 
 
@@ -1634,7 +1636,7 @@ rule deepc_100bpdown:
         temp("{set}/{set}_100bpdown_deepc.bed"),
     shell:
         """
-        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
+        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
         """
 
 
