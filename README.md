@@ -49,7 +49,7 @@ Almost ready to go. After you prepared the files above, you may need to adjust t
 
 - Models and scripts as cloned from this GIT repository
 - Annotations in the `annotations/` folder
-- CADD-SV scores SV in BED format on the GRCh38 genome build. The type of SV needs to be included for each variant in the 4th column. We recommend to split files containing more than 10,000 SVs into smaller files. An example input file can be found in `input/`. The file needs to have the suffix `id_`. If you plan to process variants from another genome build or SVs in VCF format, see below.
+- CADD-SV scores SV in a sorted BED format on the GRCh38 genome build. The type of SV needs to be included for each variant in the 4th column. We recommend to split files containing more than 10,000 SVs into smaller files. An example input file can be found in `input/`. The file needs to have the suffix `id_`. If you plan to process variants from another genome build or SVs in VCF format, see below.
 
 ## Running the pipeline
 
