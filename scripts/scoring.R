@@ -65,15 +65,18 @@ caddsv=function(x){
   k[[4]][,121]=apply(cbind(k[[2]][,121],k[[5]][,121]),1,min)
   k[[4]][,122]=apply(cbind(k[[2]][,122],k[[5]][,122]),1,min)
   k[[4]][,123]=apply(cbind(k[[2]][,123],k[[5]][,123]),1,min)
-   y[[1]]=k[[1]]
+  y[[1]]=k[[1]]
   y[[2]]=k[[4]]
   return(y)
 }
 
 
 gnomad.scale=readRDS("models/2021scale.RDS")
-gnomad.rank=readRDS("models/2021gnomadrank20k.RDS")
-gnomad.rank2=readRDS("models/2021gnomadrank20k_2.RDS")
+#gnomad.rank=readRDS("models/2021gnomadrank20k.RDS")
+#gnomad.rank2=readRDS("models/2021gnomadrank20k_2.RDS")
+ct.del=read.table("models/conversion_table_PHRED_DEL.txt")
+ct.dup=read.table("models/conversion_table_PHRED_DUP.txt")
+ct.ins=read.table("models/conversion_table_PHRED_INS.txt")
 
 cdel.model=readRDS("models/cdelmodelRF.RDS")
 hdel.model=readRDS("models/hdelmodelRF.RDS")
@@ -135,23 +138,33 @@ dups[[1]][is.na(dups[[1]])] <- 0
 dups[[2]][is.na(dups[[2]])] <- 0
 
 #scoring DEL INS and DUPs according to the appropriate model
-ranker=function(x,gnomad) {
-  k=x
-  for(i in 1:length(k))
-  {
-    k[i]=length(which(gnomad<x[i]))/length(gnomad)
-  }
-  return(k)
-}
+#ranker=function(x,gnomad) {
+#  k=x
+#  for(i in 1:length(k))
+#  {
+#    k[i]=length(which(gnomad<x[i]))/length(gnomad)
+#  }
+#  return(k)
+#}
 
 library(randomForest)
 if(dim(dels[[1]])[1]>0){
   del1=predict(cdel.model,dels[[1]][,4:131])*(-1)
   del2=predict(hdel.model,dels[[2]][,4:131])*(-1)
-  rank.del1=ranker(del1,gnomad.rank[[1]])
-  rank.del2=ranker(del2,gnomad.rank[[2]])
-  del=apply(cbind(rank.del1,rank.del2),1,max)
-  rank.del=ranker(del,gnomad.rank2[[1]])
+  score.del=apply(cbind(del1,del2), 1, max)
+  
+  ##phred
+  phred.del=sort(ct.del[,1])
+  interval.phred.del=sort(ct.del[,2])
+  final.phred.del=rep(NA,length(score.del))
+  for(i in 1:length(score.del)){
+    final.phred.del[i]=phred.del[findInterval(score.del[i],interval.phred.del)]
+  }
+  
+  #rank.del1=ranker(del1,gnomad.rank[[1]]) #previous scaling using gnomAD
+  #rank.del2=ranker(del2,gnomad.rank[[2]])
+  #del=apply(cbind(rank.del1,rank.del2),1,max)
+  #rank.del=ranker(del,gnomad.rank2[[1]])
   
 }
 
@@ -159,10 +172,20 @@ if(dim(dels[[1]])[1]>0){
 if(dim(inss[[1]])[1]>0){
   ins1=predict(hins.model,inss[[1]][,4:131])*(-1)
   ins2=predict(cins.model,inss[[2]][,4:131])*(-1)
-  rank.ins1=ranker(ins1,gnomad.rank[[3]])
-  rank.ins2=ranker(ins2,gnomad.rank[[4]])
-  ins=apply(cbind(rank.ins1,rank.ins2),1,max)
-  rank.ins=ranker(ins,gnomad.rank2[[2]])
+  score.ins=apply(cbind(ins1,ins2), 1, max)
+  
+  ##phred
+  phred.ins=sort(ct.ins[,1])
+  interval.phred.ins=sort(ct.ins[,2])
+  final.phred.ins=rep(NA,length(score.ins))
+  for(i in 1:length(score.ins)){
+    final.phred.ins[i]=phred.ins[findInterval(score.ins[i],interval.phred.ins)]
+  }
+  
+  #rank.ins1=ranker(ins1,gnomad.rank[[3]])
+  #rank.ins2=ranker(ins2,gnomad.rank[[4]])
+  #ins=apply(cbind(rank.ins1,rank.ins2),1,max)
+  #rank.ins=ranker(ins,gnomad.rank2[[2]])
   
 }
 
@@ -170,11 +193,21 @@ if(dim(inss[[1]])[1]>0){
 if(dim(dups[[1]])[1]>0){
   dup1=predict(cdel.model,dups[[1]][,4:131])*(-1)
   dup2=predict(hdel.model,dups[[2]][,4:131])*(-1)
-  rank.dup1=ranker(dup1,gnomad.rank[[5]])
-  rank.dup2=ranker(dup2,gnomad.rank[[6]])
-  dup=apply(cbind(rank.dup1,rank.dup2),1,max)
-  rank.dup=ranker(dup,gnomad.rank2[[3]])
-
+  score.dup=apply(cbind(dup1,dup2), 1, max)
+  
+  ##phred
+  phred.dup=sort(ct.dup[,1])
+  interval.phred.dup=sort(ct.dup[,2])
+  final.phred.dup=rep(NA,length(score.dup))
+  for(i in 1:length(score.dup)){
+    final.phred.dup[i]=phred.dup[findInterval(score.dup[i],interval.phred.dup)]
+  }
+  
+  #rank.dup1=ranker(dup1,gnomad.rank[[5]])
+  #rank.dup2=ranker(dup2,gnomad.rank[[6]])
+  #dup=apply(cbind(rank.dup1,rank.dup2),1,max)
+  #rank.dup=ranker(dup,gnomad.rank2[[3]])
+  
 }
 
 
@@ -195,29 +228,29 @@ if(dim(id)[2]==5){
   z.del=paste(name.caddsv,paste(id[,1],paste(as.numeric(id[,2]),as.numeric(id[,3]),sep="-"),sep=":"),sep="_")[which(id[,4]=="DEL")]
   z.ins=paste(name.caddsv,paste(id[,1],paste(as.numeric(id[,2]),as.numeric(id[,3]),sep="-"),sep=":"),sep="_")[which(id[,4]=="INS")]
   z.dup=paste(name.caddsv,paste(id[,1],paste(as.numeric(id[,2]),as.numeric(id[,3]),sep="-"),sep=":"),sep="_")[which(id[,4]=="DUP")]
-
+  
 }
 
-header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-score","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
+header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-PHRED","raw-score-combined","raw-score-span","raw-score-flank",colnames(dels[[1]])[4:131])
 
 
 if(dim(dels[[1]])[1]>0){
-d=cbind(dels2[,1:3],"DEL",z.del,rank.del,del1,del2,dels2[,4:131])
-colnames(d)=header
-d[which(d[,1]==0),1]="X"
-
+  d=cbind(dels2[,1:3],"DEL",z.del,final.phred.del,score.del,del1,del2,dels2[,4:131])
+  colnames(d)=header
+  d[which(d[,1]==0),1]="X"
+  
 }else(d=data.frame())
 
 if(dim(dups[[1]])[1]>0){
-dupli=cbind(dups2[,1:3],"DUP",z.dup,rank.dup,dup1,dup2,dups2[,4:131])
-colnames(dupli)=header
-dupli[which(dupli[,1]==0),1]="X"
+  dupli=cbind(dups2[,1:3],"DUP",z.dup,final.phred.dup,score.dup,dup1,dup2,dups2[,4:131])
+  colnames(dupli)=header
+  dupli[which(dupli[,1]==0),1]="X"
 }else(dupli=data.frame())
 
 if(dim(inss[[1]])[1]>0){
-inserts=cbind(inss2[,1:3],"INS",z.ins,rank.ins,ins1,ins2,inss2[,4:131])
-colnames(inserts)=header
-inserts[which(inserts[,1]==0),1]="X"
+  inserts=cbind(inss2[,1:3],"INS",z.ins,final.phred.ins,score.ins,ins1,ins2,inss2[,4:131])
+  colnames(inserts)=header
+  inserts[which(inserts[,1]==0),1]="X"
 }else(inserts=data.frame())
 
 
