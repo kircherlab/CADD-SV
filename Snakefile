@@ -142,7 +142,7 @@ rule GC:
         temp("{set}/{set}_gc.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output.t1}
         """
 
 
@@ -266,7 +266,7 @@ rule gerp:
         temp("{set}/{set}_gerp_mean.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
@@ -472,7 +472,7 @@ rule RemapTF:
         temp("{set}/{set}_remapTF_mean.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nochr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
         """
 
 
@@ -678,7 +678,7 @@ rule GC_100bpup:
         temp("{set}/{set}_100bpup_gc.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
         """
 
 
@@ -803,7 +803,7 @@ rule gerp_100bpup:
         temp("{set}/{set}_100bpup_gerp_mean.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
@@ -1012,7 +1012,7 @@ rule RemapTF_100bpup:
         temp("{set}/{set}_100bpup_remapTF_mean.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
         """
 
 
@@ -1218,7 +1218,7 @@ rule GC_100bpdown:
         temp("{set}/{set}_100bpdown_gc.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
         """
 
 
@@ -1343,7 +1343,7 @@ rule gerp_100bpdown:
         temp("{set}/{set}_100bpdown_gerp_mean.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ maxVal="." }}{{ if ((maxVal == ".") || ($4 > maxVal)) {{ maxVal=$4 }} }}END{{ print maxVal }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}')| cat annotations/dummy5_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o max; done < {input.bed}) > {output}
         """
 
 
@@ -1553,7 +1553,7 @@ rule RemapTF_100bpdown:
         temp("{set}/{set}_100bpdown_remapTF_mean.bed"),
     shell:
         """
-        (while read -r line; do paste <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3}}') | awk 'BEGIN{{ count=0 }}{{ count+=1; total+=$4 }}END{{ if (count == 0) {{ print "." }} else {{ printf("%f",total/count) }} }}'); done < {input.bed}) > {output}
+        (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4_nchr.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output}
         """
 
 
