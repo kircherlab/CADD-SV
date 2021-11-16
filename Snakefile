@@ -139,7 +139,7 @@ rule GC:
     conda:
         "envs/SV.yml"
     output:
-        temp("{set}/{set}_gc.bed"),
+        t1=temp("{set}/{set}_gc.bed"),
     shell:
         """
         (while read -r line; do bedtools map -b <(tabix {input.anno} $(echo $line | awk '{{ print $1":"$2"-"$3+1}}') | cat annotations/dummy4.bed - ) -a <(echo $line | awk 'BEGIN{{ OFS="\t" }}{{ print $1,$2,$3}}') -c 4 -o mean; done < {input.bed}) > {output.t1}
