@@ -49,7 +49,7 @@ Almost ready to go. After you prepared the files above, you may need to adjust t
 
 - Models and scripts as cloned from this GIT repository
 - Annotations in the `annotations/` folder
-- CADD-SV scores SV in a sorted BED format on the GRCh38 genome build. The type of SV needs to be included for each variant in the 4th column. We recommend to split files containing more than 10,000 SVs into smaller files. An example input file can be found in `input/`. The file needs to have the suffix `id_`. If you plan to process variants from another genome build or SVs in VCF format, see below.
+- CADD-SV scores SV in a coordinate sorted BED format on the GRCh38 genome build. The type of SV needs to be included for each variant in the 4th column. We recommend to split files containing more than 10,000 SVs into smaller files. An example input file can be found in `input/`. The file needs to have the suffix `id_`. If you plan to process variants from another genome build or SVs in VCF format, see below.
 
 ## Running the pipeline
 
@@ -71,9 +71,11 @@ The pipeline outputs your SV set containing all annotations in BED format in a f
 Further information about individual annotations are kept in a subfolder named after your input dataset.
 
 
-# Further Informations
+# Further Information
 
 ## Annotations
+
+CADD-SV integrates different annotations, here some links to its annotation sources. A complete list can be found as Suppl. Table 1 of the manuscript/pre-print. 
 
 ##### Integrated Scores
 CADD (https://krishna.gs.washington.edu/download/CADD/bigWig/) \
@@ -110,7 +112,7 @@ Fantom5 enhancers (https://zenodo.org/record/556775#.Xkz3G0oo-70)
 ## Converting VCF and other genome builds
 
   If you want to score SVs in a VCF format or your SVs are not in GRCh38 genomebuild coordinates:
-  We provide an environment to handle this.
+  We provide an environment to handle this. It uses the SURVIVOR tools (https://github.com/fritzsedlazeck/SURVIVOR).
   
   ```bash
   conda env create -n prepBED --file envs/prepBED.yml
@@ -124,11 +126,10 @@ Fantom5 enhancers (https://zenodo.org/record/556775#.Xkz3G0oo-70)
   
   ```
   
-  To lift hg19 coordinates to GRCh38 apply following steps:
+  To lift hg19 coordinates to GRCh38 apply the following steps:
   
   ```
   conda activate prepBED
   liftOver beds/setname_hg19_id.bed dependencies/hg19ToHg38.over.chain.gz beds/setname_id.bed beds/setname_unlifted.bed
   ```
    
-
