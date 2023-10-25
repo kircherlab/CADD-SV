@@ -119,7 +119,7 @@ dependencies:
   - markupsafe=1.1.1=py39h3811e60_3
   - more-itertools=8.7.0=pyhd8ed1ab_0
   - multidict=5.1.0=py39h3811e60_1
-  - nbformat=5.1.2=pyhd8ed1ab_1
+  - nbformat
   - ncurses=6.2=h58526e2_4
   - networkx=2.5=py_0
   - numpy=1.20.1=py39hdbf815f_0
