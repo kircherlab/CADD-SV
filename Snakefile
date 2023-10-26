@@ -607,17 +607,19 @@ rule complete_script:
 rule prep_chr_100bpup:
     input:
         bed="beds/{set}/{set}_wchr.bed",
-        genome="annotations/hs38.fa.genome",
+        genome="annotations/ucsc/hg38.fa.sorted.genome",
     output:
         wchr="beds/{set}/{set}_100bpup.bed",
         nchr="beds/{set}/{set}_100bpup_nchr.bed",
+        tmp="beds/{set}/{set}_100bpup_tmp.bed"
     conda:
         "envs/SV.yml"
     shell:
         """
-        bedtools flank -i {input.bed} -g {input.genome} -l 100 -r 0 > {output.wchr}
-        bedtools flank -i {input.bed} -g {input.genome} -l 100 -r 0 | sed 's/^chr\|%$//g' > {output.nchr}
-
+        cat {input.bed} | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print $0}}' > {output.tmp}
+        bedtools flank -i {output.tmp} -g {input.genome} -l 100 -r 0 > {output.wchr}
+        bedtools flank -i {output.tmp} -g {input.genome} -l 100 -r 0 | sed 's/^chr\|%$//g' > {output.nchr}
+        
         """
 
 
@@ -1147,7 +1149,7 @@ rule complete_script_100bpup:
 rule prep_chr_100bpdown:
     input:
         bed="beds/{set}/{set}_wchr.bed",
-        genome="annotations/hs38.fa.genome",
+        genome="annotations/ucsc/hg38.fa.sorted.genome",
     output:
         wchr="beds/{set}/{set}_100bpdown.bed",
         nchr="beds/{set}/{set}_100bpdown_nchr.bed",
@@ -1690,6 +1692,7 @@ rule scoring:
         span="{set}/matrix.bed",
         flank_up="{set}/matrix_100bpdown.bed",
         flank_down="{set}/matrix_100bpup.bed",
+        genome="annotations/ucsc/hg38.fa.sorted.genome" #to check for regions towards the end of chromosome 
     conda:
         "envs/SV.yml"
     output:
@@ -1698,10 +1701,8 @@ rule scoring:
         name="{set}"
     shell:
         """
-        Rscript --vanilla scripts/scoring.R {params.name} {input.span} {input.flank_up} {input.flank_down} {output}
+        Rscript --vanilla scripts/scoring.R {params.name} {input.span} {input.flank_up} {input.flank_down} {input.genome} {output}
         """
-
-
 
 rule sort:
     input:

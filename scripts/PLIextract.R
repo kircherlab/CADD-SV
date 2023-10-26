@@ -6,7 +6,6 @@ args = commandArgs(trailingOnly=TRUE)
 
 
 
-
 gn2=read.table(args[1],sep="\t",header=F)
 pli=read.table(args[2],sep=",",header=T)
 
@@ -26,10 +25,12 @@ for(i in which(gn>0)){
 }
 
 res=vector()
-for(i in which(as.numeric(summary(score)[,1])>0)){
-  if(length(unlist(score[[i]]))>0){
-    res[i]=max(unlist(score[[i]]))
+if (!is.null(unlist(score))){
+  for(i in which(as.numeric(summary(score)[,1])>0)){
+    if(length(unlist(score[[i]]))>0){
+      res[i]=max(unlist(score[[i]]))
     }else(res[i]=0)
+  }
 }
 
 a1=which(res>0)
