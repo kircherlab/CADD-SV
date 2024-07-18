@@ -1,4 +1,9 @@
 ---
 dataset:
-        - test
+        - MayPD_DEL
+        - MayPN_DEL
+format:
+        - bed
+flank:
+        - 100
 ...
