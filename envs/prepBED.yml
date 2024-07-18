@@ -1,8 +1,0 @@
-name: prepBED
-channels:
-  - bioconda
-  - conda-forge
-  - defaults
-dependencies:
-  - survivor=1.0.7
-  - ucsc-liftover=377
