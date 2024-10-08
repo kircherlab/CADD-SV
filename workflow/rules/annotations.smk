@@ -112,7 +112,8 @@ rule pli:
         "{set}/{set}{format}_pli.{bedflanks}",
     shell:
         """
-        Rscript --vanilla workflow/scripts/PLIextract.R {input.gn} {input.pli} {output}
+        python workflow/scripts/PLIextract.py {input.gn} {input.pli} {output}
+        
         """
 
 # retrieving mean and max CADD scores from cadd_10score.bed.gz
@@ -199,7 +200,7 @@ rule EP:
         o1=temp("{set}/{set}{format}_EP.{bedflanks}"),
     shell:
         """
-        bedtools closest -d -t first -a {input.bed} -b {input.ep} | Rscript --vanilla workflow/scripts/annotateHIC.R stdin {output.o1}
+        bedtools closest -d -t first -a {input.bed} -b {input.ep} | python workflow/scripts/annotateHIC.py /dev/stdin {output.o1}
         """
 
 # frequently interacting regulatory elements
@@ -237,7 +238,7 @@ rule HIC_hESC:
         o1=temp("{set}/{set}{format}_HIC_hESC.{bedflanks}"),
     shell:
         """
-        bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla workflow/scripts/annotateHIC.R stdin {output.o1}
+        bedtools closest -d -t first -a {input.bed} -b {input.hic} | python workflow/scripts/annotateHIC.py /dev/stdin {output.o1}
         """
 
 # hic data from encode
@@ -251,7 +252,7 @@ rule HIC_encode:
         o1=temp("{set}/{set}{format}_encode_{cells}_{tad}_hic.{bedflanks}"),
     shell:
         """
-        bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla workflow/scripts/annotateHIC.R stdin {output.o1}
+        bedtools closest -d -t first -a {input.bed} -b {input.hic} | python workflow/scripts/annotateHIC.py /dev/stdin {output.o1}
         """
 
 
@@ -275,7 +276,7 @@ rule microsynteny:
         o1=temp("{set}/{set}{format}_microsynteny.{bedflanks}"),
     shell:
         """
-        bedtools closest -d -t first -a {input.bed} -b {input.hic} | Rscript --vanilla workflow/scripts/annotateHIC.R stdin {output.o1}
+        bedtools closest -d -t first -a {input.bed} -b {input.hic} | python workflow/scripts/annotateHIC.py /dev/stdin {output.o1}
         """
 
 
