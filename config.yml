@@ -1,7 +1,6 @@
 ---
 dataset:
-        - MayPD_DEL
-        - MayPN_DEL
+        - test
 format:
         - bed
 flank:

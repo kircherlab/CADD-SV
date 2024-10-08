@@ -7,12 +7,9 @@ rule prep_files:
         CB="beds/{set}/{set}{format}_CBinput.bed",
     shell:
         """
-        workflow/scripts/input_{wildcards.format}_preprocessing.sh {input} > beds/{wildcards.set}/{wildcards.set}{wildcards.format}_intermediate_prep.tmp
-        cut -f1,2,3,4 beds/{wildcards.set}/{wildcards.set}{wildcards.format}_intermediate_prep.tmp > {output.CB}
-        rm beds/{wildcards.set}/{wildcards.set}{wildcards.format}_intermediate_prep.tmp
-        
+        mkdir -p beds/{wildcards.set}
+        bash workflow/scripts/input_{wildcards.format}_preprocessing.sh {input} | cut -f1,2,3,4 > {output.CB}
         """
-
 
 rule flanks:
     input:
