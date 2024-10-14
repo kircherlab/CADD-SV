@@ -1,0 +1,15 @@
+name: NT
+channels:
+  - nvidia
+  - conda-forge
+  - default
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.12.5=h2ad013b_0_cpython
+  - pandas=2.2.2=py312h1d6d2e6_1
+  - h5py=3.11.0=nompi_py312hb7ab980_102
+  - pip==24.2
+  - pip:
+    - -e /home/catona/work/CADD-SV/nucleotide-transformer
+
