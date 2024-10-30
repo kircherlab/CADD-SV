@@ -12,4 +12,4 @@ dependencies:
   - pip==24.2
   - pip:
     - -e /home/catona/work/CADD-SV/nucleotide-transformer
-
+    - jax[cuda12]

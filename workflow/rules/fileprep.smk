@@ -1,3 +1,5 @@
+import os
+gpu_available = bool(os.environ.get("CUDA_VISIBLE_DEVICES"))
 rule prep_files:
     input:
         bed="input/id_{set}.{format}",
@@ -38,47 +40,31 @@ rule flanks:
         
         """
 
-rule split_bed_SB:
-    input:
-        SB="beds/{set}/{set}{format}_SBinput.bed"
-    conda:
-        "../envs/preprocessing.yml"
-    output:
-        flag="beds/{set}/{set}{format}_SB.flag"
-    params:
-        split_dir="beds/{set}/split_for_SB"
-    shell:
-        """
-        mkdir -p {params.split_dir}
-        split -l 5 {input.SB} {params.split_dir}/part_
-        touch {output.flag}
-        """
 
 rule run_nt_script:
     input:
-        "beds/{set}/{set}{format}_SB.flag"
+        "beds/{set}/{set}{format}_SBinput.bed"
     conda:
         "../envs/NT.yml"
-    params:
-        split_dir="beds/{set}/split_for_SB"
+    resources:
+        gpu=1 if gpu_available else 0,
+        mem_gb=200
     output:
-        flag="beds/{set}/{set}{format}_NT.flag"
+        "beds/{set}/{set}{format}_SBprobabilities.h5"
     shell:
         """
-        python workflow/scripts/run_segmentNT.py {params.split_dir}
-        cat {input} > {output.flag}
+        python workflow/scripts/run_segmentNT.py {input} {output}
         """
 
 rule SB_features_generation:
     input:
-        "beds/{set}/{set}{format}_NT.flag"
+        coordinates="beds/{set}/{set}{format}_SBinput.bed",
+        probabilities="beds/{set}/{set}{format}_SBprobabilities.h5"
     conda:
         "../envs/NT.yml"
-    params:
-        split_dir="beds/{set}/split_for_SB"
     output:
-         "{set}/{set}{format}_SB_features.bed"
+         "{set}/{set}{format}_SBfeatures.bed"
     shell:
         """
-        python workflow/scripts/SB_features_df_generator.py {params.split_dir} > {output}
+        python workflow/scripts/SB_features_df_generator.py {input.coordinates} {input.probabilities} > {output}
         """

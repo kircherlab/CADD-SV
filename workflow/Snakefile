@@ -69,5 +69,5 @@ include: "rules/annotations.smk"
 rule all:
     input:
       #matrix=expand("output/{sets}{formats}_score.bed", sets=config["dataset"], formats=config["format"])
-      matrix=expand("{sets}/{sets}{formats}_SB_features.bed", sets=config["dataset"], formats=config["format"])
+      matrix=expand("{sets}/{sets}{formats}_SBfinal.bed", sets=config["dataset"], formats=config["format"])
       #matrix=expand("{sets}/{sets}{formats}_matrix.{bedflank}", sets=config["dataset"], formats=config["format"], bedflank=["bed", "bedup", "beddown", "bedflank"])
