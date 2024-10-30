@@ -13,6 +13,8 @@ cadd.sv.read=function(x,z){
   header=colnames(x)
   
   y[,1]=gsub('[chr\n]', '', y[,1])
+  y[,1]=gsub('X', '23', y[,1])
+  y[,1]=gsub('Y', '24', y[,1])
   
   for(i in 1:131){
     y[,i]=as.numeric(y[,i])
@@ -240,20 +242,23 @@ header=c(colnames(tbs[[1]])[1:3],"type","name","CADDSV-PHRED","raw-score-combine
 if(dim(dels[[1]])[1]>0){
   d=cbind(dels2[,1:3],"DEL",z.del,final.phred.del,score.del,del1,del2,dels2[,4:131])
   colnames(d)=header
-  d[which(d[,1]==0),1]="X"
-  
+  d[which(d[,1]==23),1]="X"
+  d[which(d[,1]==24),1]="Y"
+
 }else(d=data.frame())
 
 if(dim(dups[[1]])[1]>0){
   dupli=cbind(dups2[,1:3],"DUP",z.dup,final.phred.dup,score.dup,dup1,dup2,dups2[,4:131])
   colnames(dupli)=header
-  dupli[which(dupli[,1]==0),1]="X"
+  dupli[which(dupli[,1]==23),1]="X"
+  dupli[which(dupli[,1]==24),1]="Y"
 }else(dupli=data.frame())
 
 if(dim(inss[[1]])[1]>0){
   inserts=cbind(inss2[,1:3],"INS",z.ins,final.phred.ins,score.ins,ins1,ins2,inss2[,4:131])
   colnames(inserts)=header
-  inserts[which(inserts[,1]==0),1]="X"
+  inserts[which(inserts[,1]==23),1]="X"
+  inserts[which(inserts[,1]==24),1]="Y"
 }else(inserts=data.frame())
 
 
