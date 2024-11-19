@@ -6,8 +6,8 @@ import sys
 # Function definition for scoring
 
 
-def cadd_sv_read(x, ext, z):
-    y = pd.read_table(f"{x}/{x}{ext}_matrix.bed{z}", header=0, low_memory=False)
+def cadd_sv_read(file):
+    y = pd.read_table(file, header=0, low_memory=False)
     y.iloc[:, 0] = y.iloc[:, 0].replace(to_replace='[chr\n]', value='', regex=True)
     y.iloc[:, 0] = y.iloc[:, 0].replace(to_replace='X', value='23', regex=True)
     y.iloc[:, 0] = y.iloc[:, 0].replace(to_replace='Y', value='24', regex=True)
@@ -45,16 +45,16 @@ def cadd_sv_read(x, ext, z):
     
     return y
 
-def cadd_sv(x, ext, genome):
+def cadd_sv(matrix, up, down, genome):
     k = []
     y = []
 
     genome = pd.read_table(genome)  # added for ranges towards the end of chromosome
     genome.iloc[:, 0] = genome.iloc[:, 0].replace(to_replace='[chr\n]', value='', regex=True)  # added for ranges towards the end of chromosome
     
-    k.append(cadd_sv_read(x, ext, z=""))
-    k.append(cadd_sv_read(x, ext, z="up"))
-    k.append(cadd_sv_read(x, ext, z="down"))
+    k.append(cadd_sv_read(matrix))
+    k.append(cadd_sv_read(up))
+    k.append(cadd_sv_read(down))
 
     k.append(k[1] + k[2])
     k[3].iloc[:, 121] = np.minimum(k[2].iloc[:, 121], k[3].iloc[:, 121])
@@ -73,6 +73,6 @@ def cadd_sv(x, ext, genome):
     return y
     
 
-CB = cadd_sv(x=sys.argv[1], ext="bed", genome="ucsc/hg38.fa.genome")
+CB = cadd_sv(matrix=sys.argv[1], up=sys.argv[2], down=sys.argv[3], genome="ucsc/hg38.fa.genome")
 
-CB[2].to_csv(sys.argv[2], sep="\t", index=False)
+CB[2].to_csv(sys.argv[4], sep="\t", index=False)

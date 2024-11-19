@@ -52,13 +52,9 @@ genomegitars = [
 # Cell lines from Encode for HIC datasets
 CL = ["gm12878", "msc", "mes", "imr90", "h1"]
 
-# Regions and flanks definition
-BEDFLANK = ["bed", "bedup", "beddown", "bedflank"]
-
 # Supported Formats
 wildcard_constraints:
-    format="bed|vcf",
-	bedflanks="bed|bedup|beddown|bedflank"
+    format="bed|vcf"
 
 
 include: "rules/fileprep.smk"
@@ -69,5 +65,8 @@ include: "rules/annotations.smk"
 rule all:
     input:
       #matrix=expand("output/{sets}{formats}_score.bed", sets=config["dataset"], formats=config["format"])
-      matrix=expand("{sets}/{sets}{formats}_SBfinal.bed", sets=config["dataset"], formats=config["format"])
-      #matrix=expand("{sets}/{sets}{formats}_matrix.{bedflank}", sets=config["dataset"], formats=config["format"], bedflank=["bed", "bedup", "beddown", "bedflank"])
+      matrix=expand("{sets}/{sets}{formats}_SBfinal.bed", sets=config["dataset"], formats=config["format"]),
+      #matrix=expand("{sets}/{sets}{formats}_generated_models.txt", sets=config["dataset"], formats=config["format"]),
+      #matrixup=expand("{sets}/{sets}{formats}_matrix.bedup{flanks}", sets=config["dataset"], formats=config["format"], flanks=config["flank"]),
+      #matrixdown=expand("{sets}/{sets}{formats}_matrix.beddown{flanks}", sets=config["dataset"], formats=config["format"], flanks=config["flank"]),
+      

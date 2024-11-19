@@ -28,15 +28,13 @@ rule flanks:
         tmpup="beds/{set}/{set}{format}_CBinput.bedup_tmp",
         flanksize=config["flank"],
     output:
-        up="beds/{set}/{set}{format}_CBinput.bedup",
-        down="beds/{set}/{set}{format}_CBinput.beddown",
-        flank="beds/{set}/{set}{format}_CBinput.bedflank"
+        up="beds/{set}/{set}{format}_CBinput.bedup{flanksize}",
+        down="beds/{set}/{set}{format}_CBinput.beddown{flanksize}",
     shell:
         """
         cat {input.CB} | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print $0}}' > {params.tmpup}
         bedtools flank -i {params.tmpup} -g {input.genome} -l {params.flanksize} -r 0| awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print}}' | sort -k1,1 -k2,2n - > {output.up}
         bedtools flank -i {input.CB} -g {input.genome} -r {params.flanksize} -l 0 | sort -k1,1 -k2,2n - > {output.down}
-        bedtools slop -i {input.CB} -g {input.genome} -b {params.flanksize} | sort -k1,1 -k2,2n - > {output.flank}
         
         """
 

@@ -439,6 +439,7 @@ rule deepc:
 
 rule complete_CB_annotation:
     input:
+        input="input/id_{set}.{format}",
         cadd="{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}",
         cadd2="{set}/{set}{format}_cadd2_count.{bedflanks}",
         ccr="{set}/{set}{format}_ccr_mean.{bedflanks}",
@@ -472,12 +473,14 @@ rule complete_CB_annotation:
         "../envs/SV.yml"
     shell:
         """
-        paste <(cut -f1-11 {input.cadd}) <(cut -f4 {input.cadd2}) <(cut -f4 {input.ccr}) <(cut -f4-28 {input.chromHMM}) <(cut -f4,5,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) <(cut -f4-7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4-11 {input.gm}) <(cut -f4 {input.gerp}) <(cut -f4 {input.gerp2}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4-7 {input.hesc}) <(cut -f4-7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli}) <(cut -f4,5,6 {input.g_dist}) <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc}) <(cut -f4,5,7 {input.ultrac}) <(cut -f4 {input.linsight})| cat {input.header} - > {output}
+        paste <(cut -f1-3 {input.input}) <(cut -f4-11 {input.cadd}) <(cut -f4 {input.cadd2}) <(cut -f4 {input.ccr}) <(cut -f4-28 {input.chromHMM}) <(cut -f4,5,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) <(cut -f4-7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4-11 {input.gm}) <(cut -f4 {input.gerp}) <(cut -f4 {input.gerp2}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4-7 {input.hesc}) <(cut -f4-7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli}) <(cut -f4,5,6 {input.g_dist}) <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc}) <(cut -f4,5,7 {input.ultrac}) <(cut -f4 {input.linsight})| cat {input.header} - > {output}
         """
 
 rule final_table:
     input:
         matrix="{set}/{set}{format}_matrix.bed",
+        up="{set}/{set}{format}_matrix.bedup100",
+        down="{set}/{set}{format}_matrix.beddown100",
         SB="{set}/{set}{format}_SBfeatures.bed"
     output:
         CB="{set}/{set}{format}_CBfinal.bed",
@@ -487,6 +490,33 @@ rule final_table:
         "../envs/SV.yml"
     shell:
         """
-        python workflow/scripts/CB_final.py {wildcards.set} {output.CB} {input.matrix}
-        paste {output.CB} <(cut -f4- {input.SB}) > {output.SB}
+        python workflow/scripts/CB_final.py {input.matrix} {input.up} {input.down} {output.CB} 
+        paste {output.CB} <(cut -f5- {input.SB}) > {output.SB}
         """
+
+if config.get("mode", "training") == "training":
+    rule training_mode:
+        input:
+            CB="{set}/{set}{format}_CBfinal.bed",
+            SB="{set}/{set}{format}_SBfeatures.bed",
+            XB="{set}/{set}{format}_SBfinal.bed",
+            input="input/id_{set}.{format}",
+        output:
+            "{set}/{set}{format}_generated_models.txt"
+        conda:
+            "../envs/training.yml"
+        shell:
+            """
+            python workflow/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} 100 {wildcards.set} > {output}
+            """
+elif config.get("mode", "scoring") == "scoring":
+    rule scoring_mode:
+        input:
+            "scoring_input_file.txt"
+        output:
+            "scoring_output.txt"
+        shell:
+            """
+            echo "Running scoring rule"
+            cat {input} > {output}
+            """
