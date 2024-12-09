@@ -10,7 +10,7 @@ cadd.sv.read=function(x,z){
   
   y=as.matrix(read.table(paste(x,"/matrix",z,".bed",sep=""),header=T))
   
-  header=colnames(x)
+  header=colnames(y)
   
   y[,1]=gsub('[chr\n]', '', y[,1])
   y[,1]=gsub('X', '23', y[,1])
@@ -21,11 +21,11 @@ cadd.sv.read=function(x,z){
   }
   
   y[is.na(y)] <- 0
-  y=apply(y,2, as.numeric)
+  y=lapply(y, as.numeric)
   y[is.na(y)] <- 0
-  header=colnames(y)
+  #header=colnames(y)
   y=data.frame(y)
-  
+  colnames(y)=header
   ylen=y[,3]-y[,2]
   y$DNase.seq_max[which(y$DNase.seq_max>3000)]=3000 #DNAse outliers
   y$DDD_HaploInsuf[which(y$DDD_HaploInsuf>1)]=1 #DDD outliers

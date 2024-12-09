@@ -1,9 +1,8 @@
 name: SV
 channels:
-  - r
   - bioconda
   - conda-forge
-  - defaults
+  - nodefaults
 dependencies:
   - bedtools=2.27.1
   - htslib
