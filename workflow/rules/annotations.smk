@@ -479,12 +479,12 @@ rule complete_CB_annotation:
 rule final_table:
     input:
         matrix="{set}/{set}{format}_matrix.bed",
-        up="{set}/{set}{format}_matrix.bedup100",
-        down="{set}/{set}{format}_matrix.beddown100",
+        up="{set}/{set}{format}_matrix.bedup{flanksize}",
+        down="{set}/{set}{format}_matrix.beddown{flanksize}",
         SB="{set}/{set}{format}_SBfeatures.bed"
     output:
-        CB="{set}/{set}{format}_CBfinal.bed",
-        SB="{set}/{set}{format}_SBfinal.bed",
+        CB="{set}/{set}{format}_CBfinal{flanksize}.bed",
+        SB="{set}/{set}{format}_SBfinal{flanksize}.bed",
 
     conda:
         "../envs/SV.yml"
@@ -497,17 +497,17 @@ rule final_table:
 if config.get("mode", "training") == "training":
     rule training_mode:
         input:
-            CB="{set}/{set}{format}_CBfinal.bed",
+            CB="{set}/{set}{format}_CBfinal{flanksize}.bed",
             SB="{set}/{set}{format}_SBfeatures.bed",
-            XB="{set}/{set}{format}_SBfinal.bed",
+            XB="{set}/{set}{format}_SBfinal{flanksize}.bed",
             input="input/id_{set}.{format}",
         output:
-            "{set}/{set}{format}_generated_models.txt"
+            "{set}/{set}{format}_generated_models{flanksize}.txt"
         conda:
             "../envs/training.yml"
         shell:
             """
-            python workflow/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} 100 {wildcards.set} > {output}
+            python workflow/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
             """
 elif config.get("mode", "scoring") == "scoring":
     rule scoring_mode:
