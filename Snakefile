@@ -189,8 +189,7 @@ rule gene_model_dist:
     output:
         temp("{set}/{set}_genetic_dist.bed"),
     shell:
-        """
-        grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}   """
+        "grep 'exon' {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep 'gene' {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9) | paste - <(grep 'start_codon' {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}"
 
 
 # gene names necessary for PlI extraction
@@ -445,7 +444,8 @@ rule genomegitar3:
     shell:
         """
         cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i<m)m=$i;print m}}' > {output.mingg}
-        cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i>m)m=$i;print m}}' > {output.maxgg}"""
+        cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i>m)m=$i;print m}}' > {output.maxgg}
+        """
 
 
 rule MPC:
@@ -618,7 +618,7 @@ rule prep_chr_100bpup:
         """
         cat {input.bed} | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print $0}}' > {output.tmp}
         bedtools flank -i {output.tmp} -g {input.genome} -l 100 -r 0 > {output.wchr}
-        bedtools flank -i {output.tmp} -g {input.genome} -l 100 -r 0 | sed 's/^chr\|%$//g' > {output.nchr}
+        bedtools flank -i {output.tmp} -g {input.genome} -l 100 -r 0 | sed 's/^chr\\|%$//g' > {output.nchr}
         
         """
 
@@ -1158,7 +1158,7 @@ rule prep_chr_100bpdown:
     shell:
         """
         bedtools flank -i {input.bed} -g {input.genome} -l 0 -r 100 | bedtools sort > {output.wchr}
-        bedtools flank -i {input.bed} -g {input.genome} -l 0 -r 100 | bedtools sort | sed 's/^chr\|%$//g' > {output.nchr}
+        bedtools flank -i {input.bed} -g {input.genome} -l 0 -r 100 | bedtools sort | sed 's/^chr\\|%$//g' > {output.nchr}
 
         """
 
@@ -1250,13 +1250,9 @@ rule gene_model_100bpdown:
     output:
         temp("{set}/{set}_100bpdown_genemodel.bed"),
     shell:
-        """
-        paste <( bedtools coverage -b <(grep "exon" {input.anno}) -a {input.bed} | cut -f 1,2,3,5 ) <(bedtools coverage -b <(grep "transcript" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "gene" {input.anno} ) -a {input.bed} | cut -f 5) <( bedtools coverage -b <( grep "start_codon" {input.anno} ) -a {input.bed} | cut -f 5 ) <( bedtools coverage -b <(grep "stop_codon" {input.anno}) -a {input.bed} | cut -f 5) <(bedtools coverage -b <(grep "three_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "five_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "CDS" {input.anno}) -a {input.bed} | cut -f 5 ) > {output}
-        """
+        "paste <( bedtools coverage -b <(grep 'exon' {input.anno}) -a {input.bed} | cut -f 1,2,3,5 ) <(bedtools coverage -b <(grep 'transcript' {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep 'gene' {input.anno} ) -a {input.bed} | cut -f 5) <( bedtools coverage -b <( grep 'start_codon' {input.anno} ) -a {input.bed} | cut -f 5 ) <( bedtools coverage -b <(grep 'stop_codon' {input.anno}) -a {input.bed} | cut -f 5) <(bedtools coverage -b <(grep 'three_prime_utr' {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep 'five_prime_utr' {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep 'CDS' {input.anno}) -a {input.bed} | cut -f 5 ) > {output}"
 
-
-# grep "exon" {input.anno} | bedtools coverage -b stdin -a {input.bed} |cut -f 1,2,3,5 |paste - <(grep "transcript" {input.anno} |bedtools coverage -b stdin -a {input.bed} |cut -f 5 ) |paste - <(grep "gene" {input.anno} | bedtools coverage -b stdin -a {input.bed} | cut -f 5)|paste - <(grep "start_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "stop_codon" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5) |paste - <(grep "three_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "five_prime_utr" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 )|paste - <(grep "CDS" {input.anno} |bedtools coverage -b stdin -a {input.bed} | cut -f 5 ) >> {output}   """
-
+# grep "exon" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 1,2,3,5 | paste - <(grep "transcript" {{input.anno}} |bedtools coverage -b stdin -a {{input.bed}} | cut -f 5 ) | paste - <(grep "gene" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 5) | paste - <(grep "start_codon" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 5 ) | paste - <(grep "stop_codon" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 5) | paste - <(grep "three_prime_utr" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 5 ) | paste - <(grep "five_prime_utr" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 5 ) | paste - <(grep "CDS" {{input.anno}} | bedtools coverage -b stdin -a {{input.bed}} | cut -f 5 ) >> {{output}}
 
 rule gene_model_dist_100bpdown:
     input:
@@ -1268,7 +1264,8 @@ rule gene_model_dist_100bpdown:
         temp("{set}/{set}_100bpdown_genetic_dist.bed"),
     shell:
         """
-        grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}   """
+        grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 1,2,3,9 | paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9) | paste - <(grep "start_codon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output}
+        """
 
 
 # gene names necessary for PlI extraction
@@ -1330,8 +1327,8 @@ rule cadd2_100bpdown:
         """
 
 
-# tabix {input.anno} -R {input.merg} | bedtools coverage -a {input.bed} -b stdin -counts > {output}
-# merg="beds/{set}/{set}_merged.bed",
+# tabix {{input.anno}} -R {{input.merg}} | bedtools coverage -a {{input.bed}} -b stdin -counts > {{output}}
+# merg="beds/{{set}}/{{set}}_merged.bed",
 
 
 # Called mean, calculates max
@@ -1379,7 +1376,7 @@ rule LINSIGHT_100bpdown:
         """
 
 
-# tabix {input.anno} -R {input.merg} | awk '!seen[$0]++' | bedtools map -a {input.bed} -b stdin -c 4 -o sum > {output}
+# tabix {{input.anno}} -R {{input.merg}} | awk '!seen[$0]++' | bedtools map -a {{input.bed}} -b stdin -c 4 -o sum > {{output}}
 
 
 # enhancer promotor links
@@ -1597,7 +1594,7 @@ rule chromHMM_MAX_100bpdown:
         """
 
 
-#  bedtools map -a {input.bed} -b stdin -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max > {output}
+#  bedtools map -a {{input.bed}} -b stdin -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28 -o max > {{output}}
 
 
 rule Fantom5_counts_100bpdown:
@@ -1677,7 +1674,7 @@ rule complete_script_100bpdown:
         "envs/SV.yml"
     shell:
         """
-        paste <(cut -f1-11 {input.cadd}) <(cut -f4 {input.cadd2}) <(cut -f4 {input.ccr}) <(cut -f4-28 {input.chromHMM}) <(cut -f4,5,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) <(cut -f4-7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4-11 {input.gm}) <(cut -f4 {input.gerp}) <(cut -f4 {input.gerp2}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4-7 {input.hesc}) <(cut -f4-7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli}) <(cut -f4,5,6 {input.g_dist}) <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc}) <(cut -f4,5,7 {input.ultrac}) <(cut -f4 {input.linsight})| cat {input.header} - > {output}
+        paste <(cut -f1-11 {input.cadd}) <(cut -f4 {input.cadd2}) <(cut -f4 {input.ccr}) <(cut -f4-28 {input.chromHMM}) <(cut -f4,5,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) <(cut -f4-7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4-11 {input.gm}) <(cut -f4 {input.gerp}) <(cut -f4 {input.gerp2}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4-7 {input.hesc}) <(cut -f4-7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli}) <(cut -f4,5,6 {input.g_dist}) <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc}) <(cut -f4,5,7 {input.ultrac}) <(cut -f4 {input.linsight}) | cat {input.header} - > {output}
         """
 
 
@@ -1716,8 +1713,4 @@ rule sort:
         """
         bedtools sort -i {input.score} | cat {input.header} - > {output}
         """
-
-
-
-
 
