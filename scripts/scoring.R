@@ -21,7 +21,11 @@ cadd.sv.read=function(x,z){
   }
   
   y[is.na(y)] <- 0
-  y=lapply(y, as.numeric)
+  if (nrow(y) == 1) {
+    y=lapply(y, as.numeric)
+  } else {
+    y=apply(y,2, as.numeric)
+  }
   y[is.na(y)] <- 0
   #header=colnames(y)
   y=data.frame(y)
