@@ -33,16 +33,15 @@ def _cli(
         False, "--force", help="Force rerun of all rules (snakemake --forceall)"
     ),
 ):
-    """
-    Single-command interface: call as
-
-        caddsv my_calls.bed
-        caddsv input/id_longrange_cherie.bed
-        caddsv longrange_cherie
-    """
     cfg = config if config is not None else DEFAULT_CONFIG
 
-    # Where Snakemake expects id_<name>.bed
+
+    workdir = Path("beds")
+    workdir.mkdir(exist_ok=True)
+
+    outdir = Path("scored")
+    outdir.mkdir(exist_ok=True)
+
     input_dir = Path("input")
     input_dir.mkdir(exist_ok=True)
 
@@ -52,14 +51,13 @@ def _cli(
         p = Path(raw)
 
         if p.suffix.lower() == ".bed":
-            # Case 1: user gave a BED path (absolute or relative)
+
             if not p.exists():
                 raise typer.BadParameter(f"BED file '{p}' does not exist.")
 
             bed_path = p.resolve()
             stem = bed_path.stem
 
-            # If the file is already named id_<name>.bed, strip the id_ prefix
             if stem.startswith("id_"):
                 name = stem[3:]
             else:
@@ -67,13 +65,11 @@ def _cli(
 
             target = input_dir / f"id_{name}.bed"
 
-            # If target exists and points elsewhere, complain
             if target.exists() and target.resolve() != bed_path:
                 raise typer.BadParameter(
                     f"Input conflict: {target} already exists and does not match {bed_path}."
                 )
 
-            # Create symlink or copy if needed
             if not target.exists():
                 try:
                     target.symlink_to(bed_path)
@@ -83,7 +79,7 @@ def _cli(
             datasets.append(name)
 
         else:
-            # Case 2: user gave a dataset name
+
             name = raw
             expected = input_dir / f"id_{name}.bed"
             if not expected.exists():
@@ -124,9 +120,28 @@ def _cli(
     subprocess.run(cmd, check=True, env=env)
 
 
+    for name in datasets:
+        src = Path("output") / f"{name}bed_score100.bed"
+        if not src.exists():
+
+            raise typer.Exit(
+                code=1
+            )
+
+        dst = outdir / f"{name}_score.tsv"
+
+        if dst.exists():
+            dst.unlink()
+
+        try:
+            dst.symlink_to(src.resolve())
+        except OSError:
+            shutil.copy2(src, dst)
+
+    typer.echo(f"Final scores written to: {outdir.resolve()}")
+
+
 def main():
-    # Entry point used by the console script:
-    # caddsv -> this function -> typer.run(_cli)
     typer.run(_cli)
 
 

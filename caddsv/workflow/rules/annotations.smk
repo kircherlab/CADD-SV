@@ -6,7 +6,7 @@ rule CTCF:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_ctcf.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_ctcf.{bedflanks}"),
     shell:
         """
         bedtools coverage -b {input.anno} -a {input.bed} > {output}
@@ -19,7 +19,7 @@ rule ultraconserved:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_ultraconserved.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_ultraconserved.{bedflanks}"),
     shell:
         """
         bedtools coverage -b {input.anno} -a {input.bed} > {output}
@@ -33,8 +33,7 @@ rule GC:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #t1=temp("{set}/{set}{format}_gc.{bedflanks}"),
-        t1="{set}/{set}{format}_gc.{bedflanks}",
+        t1=temp("beds/{set}/{set}{format}_gc.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/mean_map.py {input.bed} {input.anno}  > {output.t1}
@@ -49,8 +48,7 @@ rule gene_model_tmp:
     conda:
         "../envs/SV.yml"
     output:
-        #temp("{set}/{set}{format}_gm_tmp.{bedflanks}"),
-        "{set}/{set}{format}_gm_tmp.{bedflanks}",
+        temp("beds/{set}/{set}{format}_gm_tmp.{bedflanks}"),
     shell:
         """
         tabix {input.anno} -R {input.merg} | awk '{{ if ($0 ~ "transcript_id") print $0; else print $0" transcript_id \\"\\";"; }}' | gtf2bed - | cut -f1,2,3,8,10  > {output}
@@ -60,12 +58,11 @@ rule gene_model_tmp:
 rule gene_model:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="{set}/{set}{format}_gm_tmp.{bedflanks}",
+        anno="beds/{set}/{set}{format}_gm_tmp.{bedflanks}",
     conda:
         "../envs/SV.yml"
     output:
-        #temp("{set}/{set}{format}_genemodel.{bedflanks}"),
-        "{set}/{set}{format}_genemodel.{bedflanks}",
+        temp("beds/{set}/{set}{format}_genemodel.{bedflanks}"),
     shell:
         """
         paste <( bedtools coverage -b <(grep "exon" {input.anno}) -a {input.bed} | cut -f 1,2,3,5 ) <(bedtools coverage -b <(grep "transcript" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "gene" {input.anno} ) -a {input.bed} | cut -f 5) <( bedtools coverage -b <( grep "start_codon" {input.anno} ) -a {input.bed} | cut -f 5 ) <( bedtools coverage -b <(grep "stop_codon" {input.anno}) -a {input.bed} | cut -f 5) <(bedtools coverage -b <(grep "three_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "five_prime_utr" {input.anno}) -a {input.bed} | cut -f 5 ) <(bedtools coverage -b <(grep "CDS" {input.anno}) -a {input.bed} | cut -f 5 ) > {output}
@@ -78,8 +75,7 @@ rule gene_model_dist:
     conda:
         "../envs/SV.yml"
     output:
-        #temp("{set}/{set}{format}_genetic_dist.{bedflanks}"),
-        "{set}/{set}{format}_genetic_dist.{bedflanks}",
+        temp("beds/{set}/{set}{format}_genetic_dist.{bedflanks}"),
     shell:
         """
         grep "exon" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} |cut -f 1,2,3,9 |paste - <(grep "gene" {input.anno} | bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9)|paste - <(grep "start_codon" {input.anno} |bedtools closest -d -t first -b stdin -a {input.bed} | cut -f 9 ) >> {output} 
@@ -94,7 +90,7 @@ rule gene_names:
     conda:
         "../envs/SV.yml"
     output:
-        "{set}/{set}{format}_genenames.{bedflanks}",
+        "beds/{set}/{set}{format}_genenames.{bedflanks}",
     shell:
         """
         bedtools map -b {input.anno} -a {input.bed} -c 4 -o distinct > {output}
@@ -103,13 +99,12 @@ rule gene_names:
 # PLi
 rule pli:
     input:
-        gn="{set}/{set}{format}_genenames.{bedflanks}",
+        gn="beds/{set}/{set}{format}_genenames.{bedflanks}",
         pli="annotations/gnomad/pli_exac.csv",
     conda:
         "../envs/SV.yml"
     output:
-        #temp("{set}/{set}{format}_pli.{bedflanks}"),
-        "{set}/{set}{format}_pli.{bedflanks}",
+        temp("beds/{set}/{set}{format}_pli.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/PLIextract.py {input.gn} {input.pli} {output}
@@ -124,8 +119,7 @@ rule cadd_PC_phylop:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}"),
-        "{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}",
+        temp("beds/{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/rule_cadd_PC_phylop.py {input.bed} {input.anno}  > {output}
@@ -138,8 +132,7 @@ rule cadd_features_1_7:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}"),
-        "{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}",
+        temp("beds/{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/rule_cadd_features.py {input.bed} {input.anno}  > {output}
@@ -153,8 +146,7 @@ rule cadd2:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_cadd2_count.{bedflanks}"),
-        "{set}/{set}{format}_cadd2_count.{bedflanks}",
+        temp("beds/{set}/{set}{format}_cadd2_count.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/count_map.py {input.bed} {input.anno}  > {output}
@@ -167,8 +159,7 @@ rule gerp:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_gerp_max.{bedflanks}"),
-        "{set}/{set}{format}_gerp_max.{bedflanks}",
+        temp("beds/{set}/{set}{format}_gerp_max.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/max_map.py {input.bed} {input.anno}  > {output}
@@ -181,8 +172,7 @@ rule gerp2:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_gerp2_count.{bedflanks}"),
-        "{set}/{set}{format}_gerp2_count.{bedflanks}",
+        temp("beds/{set}/{set}{format}_gerp2_count.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/count_map.py {input.bed} {input.anno}  > {output}
@@ -196,8 +186,7 @@ rule LINSIGHT:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_linsight_sum.{bedflanks}"),
-        "{set}/{set}{format}_linsight_sum.{bedflanks}",
+        temp("beds/{set}/{set}{format}_linsight_sum.{bedflanks}"),
     shell:
         """
          python {workflow.basedir}/scripts/sum_map.py {input.bed} {input.anno}  > {output}
@@ -211,7 +200,7 @@ rule EP:
     conda:
         "../envs/SV.yml"
     output:
-        o1=temp("{set}/{set}{format}_EP.{bedflanks}"),
+        o1=temp("beds/{set}/{set}{format}_EP.{bedflanks}"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.ep} | python {workflow.basedir}/scripts/annotateHIC.py /dev/stdin {output.o1}
@@ -225,7 +214,7 @@ rule fire:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_fire_{celllines}.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_fire_{celllines}.{bedflanks}"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4,4 -o max,min > {output}
@@ -234,9 +223,9 @@ rule fire:
 
 rule fire2:
     input:
-        expand("{{set}}/{{set}}{{format}}_fire_{fire}.{{bedflanks}}", fire=CL),
+        expand("beds/{{set}}/{{set}}{{format}}_fire_{fire}.{{bedflanks}}", fire=CL),
     output:
-        temp("{set}/{set}{format}_fire.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_fire.{bedflanks}"),
     shell:
         "paste {input} > {output}"
 
@@ -249,7 +238,7 @@ rule HIC_hESC:
     conda:
         "../envs/SV.yml"
     output:
-        o1=temp("{set}/{set}{format}_HIC_hESC.{bedflanks}"),
+        o1=temp("beds/{set}/{set}{format}_HIC_hESC.{bedflanks}"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | python {workflow.basedir}/scripts/annotateHIC.py /dev/stdin {output.o1}
@@ -263,7 +252,7 @@ rule HIC_encode:
     conda:
         "../envs/SV.yml"
     output:
-        o1=temp("{set}/{set}{format}_encode_{cells}_{tad}_hic.{bedflanks}"),
+        o1=temp("beds/{set}/{set}{format}_encode_{cells}_{tad}_hic.{bedflanks}"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | python {workflow.basedir}/scripts/annotateHIC.py /dev/stdin {output.o1}
@@ -273,9 +262,9 @@ rule HIC_encode:
 # merging encode HIC data
 rule mergetad:
     input:
-        expand("{{set}}/{{set}}{{format}}_encode_{cells}_{tad}_hic.{{bedflanks}}", cells=CELLS, tad=TAD),
+        expand("beds/{{set}}/{{set}}{{format}}_encode_{cells}_{tad}_hic.{{bedflanks}}", cells=CELLS, tad=TAD),
     output:
-        temp("{set}/{set}{format}_HIC.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_HIC.{bedflanks}"),
     shell:
         "paste {input} > {output}"
 
@@ -287,7 +276,7 @@ rule microsynteny:
     conda:
         "../envs/SV.yml"
     output:
-        o1=temp("{set}/{set}{format}_microsynteny.{bedflanks}"),
+        o1=temp("beds/{set}/{set}{format}_microsynteny.{bedflanks}"),
     shell:
         """
         bedtools closest -d -t first -a {input.bed} -b {input.hic} | python {workflow.basedir}/scripts/annotateHIC.py /dev/stdin {output.o1}
@@ -301,8 +290,7 @@ rule ccr:
     conda:
         "../envs/SV.yml"
     output:
-        #temp("{set}/{set}{format}_ccr_mean.{bedflanks}"),
-        "{set}/{set}{format}_ccr_mean.{bedflanks}",
+        temp("beds/{set}/{set}{format}_ccr_mean.{bedflanks}"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o max > {output}
@@ -316,7 +304,7 @@ rule genomegitar1:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_genomegitar_{gg}.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_genomegitar_{gg}.{bedflanks}"),
     shell:
         """
         bedtools map -a {input.bed} \
@@ -325,18 +313,18 @@ rule genomegitar1:
 
 rule genomegitar2:
     input:
-        expand("{{set}}/{{set}}{{format}}_genomegitar_{gg}.{{bedflanks}}", gg=genomegitars),
+        expand("beds/{{set}}/{{set}}{{format}}_genomegitar_{gg}.{{bedflanks}}", gg=genomegitars),
     output:
-        temp("{set}/{set}{format}_DI.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_DI.{bedflanks}"),
     shell:
         "paste {input} > {output}"
 
 rule genomegitar3:
     input:
-        "{set}/{set}{format}_DI.{bedflanks}",
+        "beds/{set}/{set}{format}_DI.{bedflanks}",
     output:
-        maxgg=temp("{set}/{set}{format}_DI_max.{bedflanks}"),
-        mingg=temp("{set}/{set}{format}_DI_min.{bedflanks}"),
+        maxgg=temp("beds/{set}/{set}{format}_DI_max.{bedflanks}"),
+        mingg=temp("beds/{set}/{set}{format}_DI_min.{bedflanks}"),
     shell:
         """
         cut -f 4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65,69,70,74,75,79,80,84,85,89,90 {input} | awk '{{m=$1;for(i=1;i<=NF;i++)if($i<m)m=$i;print m}}' > {output.mingg}
@@ -350,7 +338,7 @@ rule MPC:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_MPC_mean.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_MPC_mean.{bedflanks}"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o mean > {output}
@@ -363,8 +351,7 @@ rule zoonomia:
     conda:
         "../envs/SV.yml"
     output:
-        #temp("{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}"),
-        "{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}",
+        temp("beds/{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 4,4,4 -o max,min,mean > {output}
@@ -377,8 +364,7 @@ rule boundary_score:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_boundary_score_count_sum.{bedflanks}"),
-        "{set}/{set}{format}_boundary_score_count_sum.{bedflanks}",
+        temp("beds/{set}/{set}{format}_boundary_score_count_sum.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/rule_boundary_score.py {input.bed} {input.anno}  > {output}
@@ -391,8 +377,7 @@ rule screen:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_screen_counts.{bedflanks}"),
-        "{set}/{set}{format}_screen_counts.{bedflanks}",
+        temp("beds/{set}/{set}{format}_screen_counts.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/rule_screen.py {input.bed} {input.anno}  > {output}
@@ -406,8 +391,7 @@ rule RemapTF:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_remapTF_mean.{bedflanks}"),
-        "{set}/{set}{format}_remapTF_mean.{bedflanks}",
+        temp("beds/{set}/{set}{format}_remapTF_mean.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/mean_map2.py {input.bed} {input.anno}  > {output}
@@ -422,7 +406,7 @@ rule encode:
     conda:
         "../envs/preprocessing.yml"
     output:
-        temp("{set}/{set}{format}_encode_{encodes}_mean.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_encode_{encodes}_mean.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/rule_encode.py {input.bed} {input.anno}  > {output}
@@ -430,9 +414,9 @@ rule encode:
 
 rule encode2:
     input:
-        expand("{{set}}/{{set}}{{format}}_encode_{encodes}_mean.{{bedflanks}}", encodes=ENCODES),
+        expand("beds/{{set}}/{{set}}{{format}}_encode_{encodes}_mean.{{bedflanks}}", encodes=ENCODES),
     output:
-        temp("{set}/{set}{format}_encode.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_encode.{bedflanks}"),
     shell:
         "paste {input} > {output}"
 
@@ -444,8 +428,7 @@ rule chromHMM_MAX:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_chromHMM_max.{bedflanks}"),
-        "{set}/{set}{format}_chromHMM_max.{bedflanks}",
+        temp("beds/{set}/{set}{format}_chromHMM_max.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/rule_chromHMM.py {input.bed} {input.anno}  > {output}
@@ -459,7 +442,7 @@ rule Fantom5_counts:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_f5_counts.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_f5_counts.{bedflanks}"),
     shell:
         """
         bedtools coverage -a {input.bed} -b {input.anno} -counts  > {output}
@@ -473,7 +456,7 @@ rule HI:
     conda:
         "../envs/SV.yml"
     output:
-        temp("{set}/{set}{format}_dddhi.{bedflanks}"),
+        temp("beds/{set}/{set}{format}_dddhi.{bedflanks}"),
     shell:
         """
         bedtools map -a {input.bed} -b {input.anno} -c 5 -o max > {output}
@@ -486,8 +469,7 @@ rule deepc:
     conda:
         "../envs/preprocessing.yml"
     output:
-        #temp("{set}/{set}{format}_deepc.{bedflanks}"),
-        "{set}/{set}{format}_deepc.{bedflanks}",
+        temp("beds/{set}/{set}{format}_deepc.{bedflanks}"),
     shell:
         """
         python {workflow.basedir}/scripts/max_map.py {input.bed} {input.anno}  > {output}
@@ -497,39 +479,39 @@ rule deepc:
 rule complete_CB_annotation:
     input:
         input="input/id_{set}.{format}",
-        cadd_features_1_7="{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}",
-        cadd="{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}",
-        cadd2="{set}/{set}{format}_cadd2_count.{bedflanks}",
-        ccr="{set}/{set}{format}_ccr_mean.{bedflanks}",
-        chromHMM="{set}/{set}{format}_chromHMM_max.{bedflanks}",
-        ctcf="{set}/{set}{format}_ctcf.{bedflanks}",
-        di_min="{set}/{set}{format}_DI_min.{bedflanks}",
-        di_max="{set}/{set}{format}_DI_max.{bedflanks}",
-        encode="{set}/{set}{format}_encode.{bedflanks}",
-        ep="{set}/{set}{format}_EP.{bedflanks}",
-        fire="{set}/{set}{format}_fire.{bedflanks}",
-        gc="{set}/{set}{format}_gc.{bedflanks}",
-        gm="{set}/{set}{format}_genemodel.{bedflanks}",
-        gerp="{set}/{set}{format}_gerp_max.{bedflanks}",
-        gerp2="{set}/{set}{format}_gerp2_count.{bedflanks}",
-        hic="{set}/{set}{format}_HIC.{bedflanks}",
-        hesc="{set}/{set}{format}_HIC_hESC.{bedflanks}",
-        microsyn="{set}/{set}{format}_microsynteny.{bedflanks}",
-        mpc="{set}/{set}{format}_MPC_mean.{bedflanks}",
-        pli="{set}/{set}{format}_pli.{bedflanks}",
-        remapTF="{set}/{set}{format}_remapTF_mean.{bedflanks}",
-        f5="{set}/{set}{format}_f5_counts.{bedflanks}",
-        hi="{set}/{set}{format}_dddhi.{bedflanks}",
-        deepc="{set}/{set}{format}_deepc.{bedflanks}",
-        ultrac="{set}/{set}{format}_ultraconserved.{bedflanks}",
-        g_dist="{set}/{set}{format}_genetic_dist.{bedflanks}",
-        linsight="{set}/{set}{format}_linsight_sum.{bedflanks}",
-        zoonomia="{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}",
-        boundary_score="{set}/{set}{format}_boundary_score_count_sum.{bedflanks}",
-        screen="{set}/{set}{format}_screen_counts.{bedflanks}",
+        cadd_features_1_7="beds/{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}",
+        cadd="beds/{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}",
+        cadd2="beds/{set}/{set}{format}_cadd2_count.{bedflanks}",
+        ccr="beds/{set}/{set}{format}_ccr_mean.{bedflanks}",
+        chromHMM="beds/{set}/{set}{format}_chromHMM_max.{bedflanks}",
+        ctcf="beds/{set}/{set}{format}_ctcf.{bedflanks}",
+        di_min="beds/{set}/{set}{format}_DI_min.{bedflanks}",
+        di_max="beds/{set}/{set}{format}_DI_max.{bedflanks}",
+        encode="beds/{set}/{set}{format}_encode.{bedflanks}",
+        ep="beds/{set}/{set}{format}_EP.{bedflanks}",
+        fire="beds/{set}/{set}{format}_fire.{bedflanks}",
+        gc="beds/{set}/{set}{format}_gc.{bedflanks}",
+        gm="beds/{set}/{set}{format}_genemodel.{bedflanks}",
+        gerp="beds/{set}/{set}{format}_gerp_max.{bedflanks}",
+        gerp2="beds/{set}/{set}{format}_gerp2_count.{bedflanks}",
+        hic="beds/{set}/{set}{format}_HIC.{bedflanks}",
+        hesc="beds/{set}/{set}{format}_HIC_hESC.{bedflanks}",
+        microsyn="beds/{set}/{set}{format}_microsynteny.{bedflanks}",
+        mpc="beds/{set}/{set}{format}_MPC_mean.{bedflanks}",
+        pli="beds/{set}/{set}{format}_pli.{bedflanks}",
+        remapTF="beds/{set}/{set}{format}_remapTF_mean.{bedflanks}",
+        f5="beds/{set}/{set}{format}_f5_counts.{bedflanks}",
+        hi="beds/{set}/{set}{format}_dddhi.{bedflanks}",
+        deepc="beds/{set}/{set}{format}_deepc.{bedflanks}",
+        ultrac="beds/{set}/{set}{format}_ultraconserved.{bedflanks}",
+        g_dist="beds/{set}/{set}{format}_genetic_dist.{bedflanks}",
+        linsight="beds/{set}/{set}{format}_linsight_sum.{bedflanks}",
+        zoonomia="beds/{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}",
+        boundary_score="beds/{set}/{set}{format}_boundary_score_count_sum.{bedflanks}",
+        screen="beds/{set}/{set}{format}_screen_counts.{bedflanks}",
         header="annotations/header.txt",
     output:
-        "{set}/{set}{format}_matrix.{bedflanks}",
+        "beds/{set}/{set}{format}_matrix.{bedflanks}",
     conda:
         "../envs/SV.yml"
     shell:
@@ -569,17 +551,17 @@ rule complete_CB_annotation:
 
 rule final_table:
     input:
-        matrix="{set}/{set}{format}_matrix.bed",
-        up="{set}/{set}{format}_matrix.bedup{flanksize}",
-        down="{set}/{set}{format}_matrix.beddown{flanksize}",
-        SB="{set}/{set}{format}_DBfeatures.bed",
-        SBref="{set}/{set}{format}_SBreffeatures.bed",
-        SBtrue="{set}/{set}{format}_SBfeatures.bed",
+        matrix="beds/{set}/{set}{format}_matrix.bed",
+        up="beds/{set}/{set}{format}_matrix.bedup{flanksize}",
+        down="beds/{set}/{set}{format}_matrix.beddown{flanksize}",
+        SB="beds/{set}/{set}{format}_DBfeatures.bed",
+        SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
+        SBtrue="beds/{set}/{set}{format}_SBfeatures.bed",
         genome="annotations/ucsc/hg38.fa.sorted.genome",
         
     output:
-        CB="{set}/{set}{format}_CBfinal{flanksize}.bed",
-        SB="{set}/{set}{format}_SBfinal{flanksize}.bed",
+        CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+        SB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
 
     conda:
         "../envs/SV.yml"
@@ -594,12 +576,12 @@ rule final_table:
 if config.get("mode", "training") == "training":
     rule training_mode:
         input:
-            CB="{set}/{set}{format}_CBfinal{flanksize}.bed",
-            SB="{set}/{set}{format}_DBfeatures.bed",
-            XB="{set}/{set}{format}_SBfinal{flanksize}.bed",
+            CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+            SB="beds/{set}/{set}{format}_DBfeatures.bed",
+            XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
             input="input/id_{set}.{format}",
         output:
-            "{set}/{set}{format}_generated_models{flanksize}.txt"
+            "beds/{set}/{set}{format}_generated_models{flanksize}.txt"
         conda:
             "../envs/training.yml"
         shell:
@@ -610,7 +592,7 @@ elif config.get("mode", "scoring") == "scoring":
     rule scoring_mode:
         input:
             input="input/id_{set}.{format}",
-            XB="{set}/{set}{format}_SBfinal{flanksize}.bed",
+            XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
         output:
             scored="output/{set}{format}_score{flanksize}.bed"
         conda:
@@ -623,12 +605,12 @@ elif config.get("mode", "scoring") == "scoring":
 elif config.get("mode", "seqonly") == "seqonly":
     rule seqonly_training:
         input:
-            CB="{set}/{set}{format}_SBreffeatures.bed",
-            SB="{set}/{set}{format}_SBfeatures.bed",
-            XB="{set}/{set}{format}_DBfeatures.bed",
+            CB="beds/{set}/{set}{format}_SBreffeatures.bed",
+            SB="beds/{set}/{set}{format}_SBfeatures.bed",
+            XB="beds/{set}/{set}{format}_DBfeatures.bed",
             input="input/id_{set}.{format}",
         output:
-            "{set}/{set}{format}_generated_models_seqonly{flanksize}.txt"
+            "beds/{set}/{set}{format}_generated_models_seqonly{flanksize}.txt"
         conda:
             "../envs/training.yml"
         shell:

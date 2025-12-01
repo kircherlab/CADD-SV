@@ -78,8 +78,8 @@ rule SB_features_generation:
     conda:
         "../envs/NT.yml"
     output:
-        SB = "{set}/{set}{format}_SBfeatures.bed",
-        SBref = "{set}/{set}{format}_SBreffeatures.bed"
+        SB = "beds/{set}/{set}{format}_SBfeatures.bed",
+        SBref = "beds/{set}/{set}{format}_SBreffeatures.bed"
     shell:
         """
         python {workflow.basedir}/scripts/SB_features_df_generator.py {input.coordinates} {input.probabilities} > {output.SB}
@@ -93,12 +93,12 @@ rule DB_features_generation:
         probabilities="beds/{set}/{set}{format}_SBprobabilities.h5",
         coordinates_ref="beds/{set}/{set}{format}_SBrefinput.bed",
         probabilities_ref="beds/{set}/{set}{format}_SBrefprobabilities.h5",
-        SB = "{set}/{set}{format}_SBfeatures.bed",
-        SBref = "{set}/{set}{format}_SBreffeatures.bed"
+        SB = "beds/{set}/{set}{format}_SBfeatures.bed",
+        SBref = "beds/{set}/{set}{format}_SBreffeatures.bed"
     conda:
         "../envs/NT.yml"
     output:
-        DB = "{set}/{set}{format}_DBfeatures.bed"
+        DB = "beds/{set}/{set}{format}_DBfeatures.bed"
     shell:
         """
         python {workflow.basedir}/scripts/DB_features_df_generator.py \

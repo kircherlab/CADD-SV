@@ -6,9 +6,10 @@ annotations/
 
 # Workflow intermediates and outputs
 beds/
-output/
+scored/
 results/
 longrange_cherie/
+output/
 
 # User input data
 input/
