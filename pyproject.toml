@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "caddsv"
+version = "2.0"
+description = "CADD-SV Structural Variant scoring Workflow"
+requires-python = ">=3.9"
+dependencies = [
+  "typer>=0.9",
+  "snakemake>=7.31.0",
+  "pulp==2.7"
+]
+
+[project.scripts]
+caddsv = "caddsv.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+include = ["caddsv*"]  
+
+[tool.setuptools.package-data]
+caddsv = [
+  "workflow/Snakefile",
+  "workflow/rules/*.smk",
+  "workflow/envs/*.yml",
+  "workflow/models/*.joblib",
+  "workflow/scripts/*.py",
+  "workflow/scripts/*.sh",
+  "config.yml",
+]

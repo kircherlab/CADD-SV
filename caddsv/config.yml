@@ -1,0 +1,9 @@
+---
+dataset: []
+format:
+        - bed
+flank:
+        - 100
+
+mode: scoring 
+...
