@@ -2,7 +2,7 @@ name: prepBED
 channels:
   - bioconda
   - conda-forge
-  - defaults
+  - nodefaults
 dependencies:
   - survivor=1.0.7
   - ucsc-liftover=377

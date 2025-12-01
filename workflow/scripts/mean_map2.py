@@ -14,8 +14,10 @@ for i, row in input_bed.iterrows():
             window.append(float(gc[3]))
         if len(window )>0:
             row[3] = np.nanmean(window)
+            row[4] = max(window)
         else:
             row[3] = "."
-        print(str(row[0]), row[1], row[2], row[3], sep="\t")
+            row[4] = "."
+        print(str(row[0]), row[1], row[2], row[3], row[4], sep="\t")
     else:
-        print(str(row[0]), row[1], row[2], ".", sep="\t")
+        print(str(row[0]), row[1], row[2], ".", ".", sep="\t")

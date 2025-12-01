@@ -8,13 +8,14 @@ rule prep_files:
         "../envs/preprocessing.yml"
     output:
         CB="beds/{set}/{set}{format}_CBinput.bed",
-        SB="beds/{set}/{set}{format}_SBinput.bed"
+        SB="beds/{set}/{set}{format}_SBinput.bed",
+        SB2="beds/{set}/{set}{format}_SBrefinput.bed"
     shell:
         """
         mkdir -p beds/{wildcards.set}
         
         python workflow/scripts/retrieve_seq_for_nt.py <(bash workflow/scripts/input_{wildcards.format}_preprocessing.sh {input.bed}) {input.genome} > {output.SB}
-        
+        python workflow/scripts/retrieve_seq_for_ref.py <(bash workflow/scripts/input_{wildcards.format}_preprocessing.sh {input.bed}) {input.genome} > {output.SB2}
         cut -f1,2,3,4 {output.SB} > {output.CB}
         """
 
@@ -38,6 +39,20 @@ rule flanks:
         
         """
 
+rule run_nt_script_ref:
+    input:
+        "beds/{set}/{set}{format}_SBrefinput.bed"
+    conda:
+        "../envs/NT.yml"
+    resources:
+        gpu=1 if gpu_available else 0,
+        mem_gb=200
+    output:
+        "beds/{set}/{set}{format}_SBrefprobabilities.h5"
+    shell:
+        """
+        python workflow/scripts/run_segmentNT.py {input} {output}
+        """
 
 rule run_nt_script:
     input:
@@ -54,6 +69,7 @@ rule run_nt_script:
         python workflow/scripts/run_segmentNT.py {input} {output}
         """
 
+
 rule SB_features_generation:
     input:
         coordinates="beds/{set}/{set}{format}_SBinput.bed",
@@ -65,4 +81,23 @@ rule SB_features_generation:
     shell:
         """
         python workflow/scripts/SB_features_df_generator.py {input.coordinates} {input.probabilities} > {output}
+        """
+
+
+rule DB_features_generation:
+    input:
+        coordinates="beds/{set}/{set}{format}_SBinput.bed",
+        probabilities="beds/{set}/{set}{format}_SBprobabilities.h5",
+        coordinates_ref="beds/{set}/{set}{format}_SBrefinput.bed",
+        probabilities_ref="beds/{set}/{set}{format}_SBrefprobabilities.h5",
+    conda:
+        "../envs/NT.yml"
+    output:
+         "{set}/{set}{format}_DBfeatures.bed"
+    shell:
+        """
+        python workflow/scripts/DB_features_df_generator.py \
+    {input.coordinates} {input.probabilities} \
+    {input.coordinates_ref} {input.probabilities_ref} > {output}
+
         """

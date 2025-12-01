@@ -37,7 +37,12 @@ def cadd_sv_read(file):
             "H3K4me1_sum", "H3K4me2_sum", "H3K4me3_sum",
             "H3K79me2_sum", "H3K9ac_sum", "H3K9me3_sum",
             "H4k20me1_sum", "totalRNA-seq_sum", "LINSIGHT",
-            "exon", "transcript", "gene", "3utr", "5utr", "cds", "nr_uc_bases"]
+            "exon", "transcript", "gene", "3utr", "5utr", "cds", "nr_uc_bases",
+            "RegSeq0_sum", "RegSeq1_sum", "RegSeq2_sum", "RegSeq3_sum",
+            "RegSeq4_sum", "RegSeq5_sum", "RegSeq6_sum", "RegSeq7_sum",
+            "RouletteAR_sum", "TADboundary_count", "boundary_score_sum", "screen_dELS",
+            "screen_pELS", "screen_CA", "screen_CA-CTCF", "screen_CA-H3K4me3", "screen_CA-TF",
+            "screen_TF", "screen_PLS", "screen_ELS_total", "screen_CA_total"]
 
     for k in tolog:  # logs of distances and sums and counts
         #i = header.index(k)

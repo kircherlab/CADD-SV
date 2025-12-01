@@ -131,10 +131,25 @@ rule cadd_PC_phylop:
         python workflow/scripts/rule_cadd_PC_phylop.py {input.bed} {input.anno}  > {output}
         """
 
+rule cadd_features_1_7:
+    input:
+        bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
+        anno="annotations/CADD/summarized_cadd_features.bed.gz",
+    conda:
+        "../envs/preprocessing.yml"
+    output:
+        #temp("{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}"),
+        "{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}",
+    shell:
+        """
+        python workflow/scripts/rule_cadd_features.py {input.bed} {input.anno}  > {output}
+        """
+
+
 rule cadd2:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/CADD/CADD_GRCh38-v1.5.bedGraph_90q_12.bed.gz",
+        anno="annotations/CADD/CADD_GRCh38-v1.7.bedGraph_10PHRED.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -188,8 +203,7 @@ rule LINSIGHT:
          python workflow/scripts/sum_map.py {input.bed} {input.anno}  > {output}
         """
 
-# TODO: cambiare Rscript in un python script (l'obiettivo è eliminare tutti i pacchetti R dall'env SV...)
-# enhancer promotor links
+# enhancer promoter links
 rule EP:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
@@ -342,10 +356,53 @@ rule MPC:
         bedtools map -a {input.bed} -b {input.anno} -c 4 -o mean > {output}
         """
 
+rule zoonomia:
+    input:
+        bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
+        anno="annotations/zoonomia/cleaned_summarized_zoonomia.bed.gz",
+    conda:
+        "../envs/SV.yml"
+    output:
+        #temp("{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}"),
+        "{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}",
+    shell:
+        """
+        bedtools map -a {input.bed} -b {input.anno} -c 4,4,4 -o max,min,mean > {output}
+        """
+
+rule boundary_score:
+    input:
+        bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
+        anno="annotations/boundary_score/boundary_score.bed.gz",
+    conda:
+        "../envs/preprocessing.yml"
+    output:
+        #temp("{set}/{set}{format}_boundary_score_count_sum.{bedflanks}"),
+        "{set}/{set}{format}_boundary_score_count_sum.{bedflanks}",
+    shell:
+        """
+        python workflow/scripts/rule_boundary_score.py {input.bed} {input.anno}  > {output}
+        """
+
+rule screen:
+    input:
+        bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
+        anno="annotations/screen/GRCh38-cCREs_sorted.bed.gz",
+    conda:
+        "../envs/preprocessing.yml"
+    output:
+        #temp("{set}/{set}{format}_screen_counts.{bedflanks}"),
+        "{set}/{set}{format}_screen_counts.{bedflanks}",
+    shell:
+        """
+        python workflow/scripts/rule_screen.py {input.bed} {input.anno}  > {output}
+        """
+
+
 rule RemapTF:
     input:
-        bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/ReMap/ReMap2_overlapTF_hg38.bg.gz",
+        bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
+        anno="annotations/ReMap/reMapDensity2022.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -440,6 +497,7 @@ rule deepc:
 rule complete_CB_annotation:
     input:
         input="input/id_{set}.{format}",
+        cadd_features_1_7="{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}",
         cadd="{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}",
         cadd2="{set}/{set}{format}_cadd2_count.{bedflanks}",
         ccr="{set}/{set}{format}_ccr_mean.{bedflanks}",
@@ -466,6 +524,9 @@ rule complete_CB_annotation:
         ultrac="{set}/{set}{format}_ultraconserved.{bedflanks}",
         g_dist="{set}/{set}{format}_genetic_dist.{bedflanks}",
         linsight="{set}/{set}{format}_linsight_sum.{bedflanks}",
+        zoonomia="{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}",
+        boundary_score="{set}/{set}{format}_boundary_score_count_sum.{bedflanks}",
+        screen="{set}/{set}{format}_screen_counts.{bedflanks}",
         header="annotations/header.txt",
     output:
         "{set}/{set}{format}_matrix.{bedflanks}",
@@ -473,7 +534,37 @@ rule complete_CB_annotation:
         "../envs/SV.yml"
     shell:
         """
-        paste <(cut -f1-3 {input.input}) <(cut -f4-11 {input.cadd}) <(cut -f4 {input.cadd2}) <(cut -f4 {input.ccr}) <(cut -f4-28 {input.chromHMM}) <(cut -f4,5,7 {input.ctcf}) <(cut -f1 {input.di_min}) <(cut -f1 {input.di_max}) <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) <(cut -f4-7 {input.ep}) <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) <(cut -f4 {input.gc}) <(cut -f4-11 {input.gm}) <(cut -f4 {input.gerp}) <(cut -f4 {input.gerp2}) <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) <(cut -f4-7 {input.hesc}) <(cut -f4-7 {input.microsyn}) <(cut -f4 {input.mpc}) <(cut -f4 {input.pli}) <(cut -f4,5,6 {input.g_dist}) <(cut -f4 {input.remapTF}) <(cut -f4 {input.f5}) <(cut -f4 {input.hi}) <(cut -f4 {input.deepc}) <(cut -f4,5,7 {input.ultrac}) <(cut -f4 {input.linsight})| cat {input.header} - > {output}
+        paste <(cut -f1-3 {input.input}) \
+        <(cut -f8-35 {input.cadd_features_1_7}) \
+        <(cut -f4-9 {input.cadd}) \
+        <(cut -f4 {input.cadd2}) \
+        <(cut -f4 {input.ccr}) \
+        <(cut -f4-28 {input.chromHMM}) \
+        <(cut -f4,5,7 {input.ctcf}) \
+        <(cut -f1 {input.di_min}) \
+        <(cut -f1 {input.di_max}) \
+        <(cut -f4,5,9,10,14,15,19,20,24,25,29,30,34,35,39,40,44,45,49,50,54,55,59,60,64,65 {input.encode}) \
+        <(cut -f4-7 {input.ep}) \
+        <(cut -f4,5,9,10,14,15,19,20,24,25 {input.fire}) \
+        <(cut -f4 {input.gc}) \
+        <(cut -f4-11 {input.gm}) \
+        <(cut -f4 {input.gerp}) \
+        <(cut -f4 {input.gerp2}) \
+        <(cut -f4,5,6,7,11,12,13,14,18,19,20,21,25,26,27,28 {input.hic}) \
+        <(cut -f4-7 {input.hesc}) \
+        <(cut -f4-7 {input.microsyn}) \
+        <(cut -f4 {input.mpc}) \
+        <(cut -f4 {input.pli}) \
+        <(cut -f4,5,6 {input.g_dist}) \
+        <(cut -f4 {input.f5}) \
+        <(cut -f4 {input.hi}) \
+        <(cut -f4 {input.deepc}) \
+        <(cut -f4,5,7 {input.ultrac}) \
+        <(cut -f4 {input.linsight}) \
+        <(cut -f4-6 {input.zoonomia}) \
+        <(cut -f4-5 {input.boundary_score}) \
+        <(cut -f4-5 {input.remapTF}) \
+        <(cut -f4-13 {input.screen}) | cat {input.header} - > {output}
         """
 
 rule final_table:
@@ -481,7 +572,7 @@ rule final_table:
         matrix="{set}/{set}{format}_matrix.bed",
         up="{set}/{set}{format}_matrix.bedup{flanksize}",
         down="{set}/{set}{format}_matrix.beddown{flanksize}",
-        SB="{set}/{set}{format}_SBfeatures.bed"
+        SB="{set}/{set}{format}_DBfeatures.bed"
     output:
         CB="{set}/{set}{format}_CBfinal{flanksize}.bed",
         SB="{set}/{set}{format}_SBfinal{flanksize}.bed",
@@ -498,7 +589,7 @@ if config.get("mode", "training") == "training":
     rule training_mode:
         input:
             CB="{set}/{set}{format}_CBfinal{flanksize}.bed",
-            SB="{set}/{set}{format}_SBfeatures.bed",
+            SB="{set}/{set}{format}_DBfeatures.bed",
             XB="{set}/{set}{format}_SBfinal{flanksize}.bed",
             input="input/id_{set}.{format}",
         output:

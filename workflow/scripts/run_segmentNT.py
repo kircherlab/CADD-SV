@@ -1,83 +1,194 @@
-import os
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+SegmentNT inference with fixed windows of 200 DNA tokens (excluding specials).
+
+Input : TSV file; DNA sequence is in a selectable 1-based column.
+Output: HDF5; one group per input line with:
+    - probs: float32 array [seq_len_nt, num_features]
+    - features: feature names (order matches probs' last dim)
+    - attrs: seq_len_nt, num_features, tokens_per_window_excl_specials=200,
+             specials_added, window_nt
+
+Progress: prints updates like [current/total] as it processes lines.
+"""
+
+import argparse
 import sys
-import haiku as hk
-import jax
-import jax.numpy as jnp
-import pandas as pd
-import numpy as np
 import h5py
-from nucleotide_transformer.pretrained import get_pretrained_segment_nt_model
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".99"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
+import numpy as np
+import torch
+from transformers import AutoTokenizer, AutoModel
 
-# Define the file path directly
-file_path = sys.argv[1]
 
-# Initialize CPU as default JAX device, fall back to CPU if GPU is not available
-try:
-    backend = "gpu"
-    devices = jax.devices(backend)
-    if not devices:
-        raise RuntimeError("No GPU devices found.")
-except RuntimeError:
-    backend = "cpu"
-    devices = jax.devices(backend)
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("input_tsv", type=str)
+    p.add_argument("output_h5", type=str)
+    p.add_argument("--seq-col", type=int, default=5,
+                   help="1-based column index of the DNA sequence in the TSV (default: 5)")
+    p.add_argument("--device", type=str, default=None, choices=[None, "cpu", "cuda"],
+                   help="Force device; default auto-detect.")
+    return p.parse_args()
 
-num_devices = len(devices)
-print(f"Devices found: {devices}")
 
-# Set up the model with required parameters
-max_num_nucleotides = 5000
-assert max_num_nucleotides % 4 == 0, (
-    "The number of DNA tokens (excluding the CLS token prepended) needs to be divisible by 2 to the power of the number of downsampling blocks, i.e., 4."
-)
+def ensure_pad_token(tokenizer, model):
+    """Add a pad token if missing (some tokenizers do not define one)."""
+    if getattr(tokenizer, "pad_token", None) is None:
+        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        try:
+            model.resize_token_embeddings(len(tokenizer))
+        except Exception:
+            pass
 
-# Adjust the rescaling factor if necessary
-inference_rescaling_factor = (max_num_nucleotides + 1) / 2048 if max_num_nucleotides + 1 > 5001 else None
-parameters, forward_fn, tokenizer, config = get_pretrained_segment_nt_model(
-    model_name="segment_nt",
-    embeddings_layers_to_save=(29,),
-    rescaling_factor=inference_rescaling_factor,
-    attention_maps_to_save=((1, 4), (7, 10)),
-    max_positions=max_num_nucleotides + 1,
-    verbose=False
-)
 
-forward_fn = hk.transform(forward_fn)
-apply_fn = jax.pmap(forward_fn.apply, axis_name='batch', devices=devices, donate_argnums=(0,))
-random_key = jax.random.PRNGKey(seed=0)
-keys = jax.random.split(random_key, num_devices)
-parameters = jax.device_put_replicated(parameters, devices=devices)
+def count_specials(tokenizer) -> int:
+    """Return the number of special tokens added for a single sequence."""
+    try:
+        return int(tokenizer.num_special_tokens_to_add(pair=False))
+    except Exception:
+        return 1  # conservative fallback
 
-# Open the file for reading and the HDF5 file for writing
-output_file = sys.argv[2]
-with open(file_path, 'r') as file, h5py.File(output_file, 'w') as f:
-    for line_idx, line in enumerate(file):
-        print(line_idx)
-        # Extract the sequence (assumed to be the 5th column)
-        fields = line.strip().split('\t')
-        sequence = fields[4] if len(fields) > 4 else 'N' * 5000  # Handle missing data
-        
-        # Replace sequences with too many 'N's with 'N' * 5000
-        if sequence.count('N') > 50:
-            sequence = 'N' * 5000
-        
-        tokens_ids = [b[1] for b in tokenizer.batch_tokenize([sequence])]
-        tokens_str = [b[0] for b in tokenizer.batch_tokenize([sequence])]
-        tokens = jnp.stack([jnp.asarray(tokens_ids, dtype=jnp.int32)] * num_devices, axis=0)
-        
-        # Infer on the sequence
-        outs = apply_fn(parameters, keys, tokens)
-        logits = outs["logits"]
-        
-        # Transform logits into probabilities
-        probabilities_unit = jnp.asarray(jax.nn.softmax(logits, axis=-1))[...,-1]
-        
-        # Append `probabilities_unit` to the HDF5 file directly
-        grp = f.create_group(f'group_{line_idx}')
-        for j, array in enumerate(probabilities_unit):
-            grp.create_dataset(f'array_{j}', data=array)
 
-        logits.block_until_ready()
-        del logits, outs  # Free GPU memory
+def tokenize_fixed_len(tokenizer, seq: str, dna_tokens_excl_specials: int, specials: int):
+    """
+    Produce exactly (dna_tokens_excl_specials + specials) tokens using padding and truncation.
+    """
+    max_length = dna_tokens_excl_specials + specials
+    return tokenizer(
+        seq,
+        return_tensors="pt",
+        padding="max_length",
+        truncation=True,
+        max_length=max_length,
+    )
+
+
+def feature_names(model, logits=None):
+    names = getattr(model.config, "features", None)
+    if names:
+        try:
+            return list(names)
+        except Exception:
+            pass
+    if logits is not None:
+        num_features = int(logits.shape[-2])  # [B, L_nt, F, 2]
+        return [f"feature_{i}" for i in range(num_features)]
+    return None
+
+
+def main():
+    args = parse_args()
+    seq_col0 = args.seq_col - 1
+
+    # Load tokenizer/model (Colab-style)
+    tokenizer = AutoTokenizer.from_pretrained("InstaDeepAI/segment_nt", trust_remote_code=True)
+    model = AutoModel.from_pretrained("InstaDeepAI/segment_nt", trust_remote_code=True)
+
+    # Device
+    device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
+    model.to(device).eval()
+    ensure_pad_token(tokenizer, model)
+
+    # Strict window: 200 DNA tokens excluding specials. Must be divisible by 4.
+    DNA_TOKENS_EXCL_SPECIALS = 200
+    assert DNA_TOKENS_EXCL_SPECIALS % 4 == 0
+    specials = count_specials(tokenizer)
+    window_tokens_total = DNA_TOKENS_EXCL_SPECIALS + specials
+
+    # SegmentNT uses non-overlapping 6-mers -> ~6 nt per DNA token
+    window_nt = DNA_TOKENS_EXCL_SPECIALS * 6
+
+    # Pre-count total lines we will actually process (non-empty and with the sequence column present)
+    with open(args.input_tsv, "r") as fin:
+        total_to_process = 0
+        for _line in fin:
+            if not _line.strip():
+                continue
+            cols = _line.rstrip("\n").split("\t")
+            if seq_col0 < len(cols):
+                total_to_process += 1
+
+    processed = 0
+
+    with open(args.input_tsv, "r") as fin, h5py.File(args.output_h5, "w") as h5:
+        seen_feature_names = None
+
+        for file_line_idx, line in enumerate(fin):
+            line = line.rstrip("\n")
+            if not line:
+                continue
+
+            cols = line.split("\t")
+            if seq_col0 >= len(cols):
+                continue
+
+            # Progress update
+            processed += 1
+            sys.stderr.write(f"\r[{processed}/{total_to_process}]")
+            sys.stderr.flush()
+
+            seq = cols[seq_col0].strip().upper()
+            if not seq:
+                # ensure at least one window
+                seq = "N" * window_nt
+
+            seq_len_nt = len(seq)
+            probs_chunks = []
+
+            # Tile sequence into 200-token windows (~1200 nt)
+            for start in range(0, seq_len_nt, window_nt):
+                chunk = seq[start:start + window_nt]
+                real_len_nt = len(chunk)
+
+                toks = tokenize_fixed_len(tokenizer, chunk, DNA_TOKENS_EXCL_SPECIALS, specials)
+                input_ids = toks["input_ids"].to(device)
+                attention_mask = toks["attention_mask"].to(device)
+
+                with torch.no_grad():
+                    out = model(input_ids=input_ids, attention_mask=attention_mask)
+
+                # logits: [B, L_nt_window, F, 2]
+                logits = out.logits
+
+                if seen_feature_names is None:
+                    seen_feature_names = feature_names(model, logits)
+
+                # Convert to probabilities; keep class index 1
+                probs = torch.softmax(logits, dim=-1)[..., 1]   # [1, L_nt_window, F]
+                probs = probs[:, :real_len_nt, :]               # drop positions from padding
+                probs_chunks.append(probs.squeeze(0).cpu().numpy().astype(np.float32))
+
+                if device.type == "cuda":
+                    torch.cuda.empty_cache()
+
+            if probs_chunks:
+                probs_full = np.concatenate(probs_chunks, axis=0)  # [seq_len_nt, F]
+            else:
+                f = len(seen_feature_names or [])
+                probs_full = np.zeros((0, f), dtype=np.float32)
+
+            # Save one group per line (use the source file line index for traceability)
+            grp = h5.create_group(f"group_{file_line_idx}")
+            grp.create_dataset("probs", data=probs_full, compression="gzip")
+
+            # Save feature names (UTF-8 strings)
+            names = seen_feature_names or [f"feature_{i}" for i in range(probs_full.shape[1])]
+            str_dt = h5py.string_dtype(encoding="utf-8")
+            grp.create_dataset("features", data=np.array(names, dtype=object), dtype=str_dt)
+
+            # Metadata
+            grp.attrs["seq_len_nt"] = int(probs_full.shape[0])
+            grp.attrs["num_features"] = int(probs_full.shape[1]) if probs_full.size else 0
+            grp.attrs["tokens_per_window_excl_specials"] = int(DNA_TOKENS_EXCL_SPECIALS)
+            grp.attrs["specials_added"] = int(specials)
+            grp.attrs["window_nt"] = int(window_nt)
+
+    # Finish the progress line with a newline
+    sys.stderr.write("\n")
+    sys.stderr.flush()
+
+
+if __name__ == "__main__":
+    main()
