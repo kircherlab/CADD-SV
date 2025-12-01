@@ -1,0 +1,36 @@
+# Snakemake working directory
+.snakemake/
+
+# Large annotation resources (not shipped with code)
+annotations/
+
+# Workflow intermediates and outputs
+beds/
+output/
+results/
+longrange_cherie/
+
+# User input data
+input/
+
+# Local config overrides (if you keep top-level config for user use)
+config/
+
+# Python build / packaging artifacts
+build/
+dist/
+*.egg-info/
+*.pyc
+__pycache__/
+
+# Snakemake-generated conda environments and env exports
+conda/
+
+# Logs and scratch
+logs/
+*.log
+
+# Editors and OS noise
+.DS_Store
+*.swp
+*.swo
