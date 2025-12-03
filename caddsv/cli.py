@@ -11,6 +11,8 @@ app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring to
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+
+
 @app.command()
 def version():
     print("CADD-SV version 2.0")
@@ -39,10 +41,8 @@ def run(
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
     ),
-
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
-
 
     workdir = Path("beds")
     workdir.mkdir(exist_ok=True)
@@ -79,10 +79,13 @@ def run(
                 )
 
             if not target.exists():
-                try:
-                    target.symlink_to(bed_path)
-                except OSError:
-                    shutil.copy2(bed_path, target)
+                # Create a *sorted copy* of the BED file
+                with target.open("w") as out_f:
+                    subprocess.run(
+                        ["sort", "-k1,1", "-k2,2n", str(bed_path)],
+                        stdout=out_f,
+                        check=True,
+                    )
 
             datasets.append(name)
 
@@ -122,7 +125,6 @@ def run(
     if unlock:
         cmd.append("--unlock")
 
-
     typer.echo("Running:\n  " + " ".join(cmd))
 
     env = os.environ.copy()
@@ -130,24 +132,18 @@ def run(
 
     subprocess.run(cmd, check=True, env=env)
 
-
     for name in datasets:
         src = Path("output") / f"{name}bed_score100.bed"
         if not src.exists():
-
-            raise typer.Exit(
-                code=1
-            )
+            raise typer.Exit(code=1)
 
         dst = outdir / f"{name}_score.tsv"
 
         if dst.exists():
             dst.unlink()
 
-        try:
-            dst.symlink_to(src.resolve())
-        except OSError:
-            shutil.copy2(src, dst)
+        # Always copy, no symlink
+        shutil.copy2(src, dst)
 
     typer.echo(f"Final scores written to: {outdir.resolve()}")
 

@@ -13,7 +13,7 @@ def cadd_sv_read(file):
     y.iloc[:, 0] = y.iloc[:, 0].replace(to_replace='Y', value='24', regex=True)
     y = y.replace('.', 0)
     
-    for i in range(1, 131):
+    for i in range(1, 172):
         y.iloc[:, i] = pd.to_numeric(y.iloc[:, i], errors='coerce')
     
     y = y.fillna(0)
