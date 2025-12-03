@@ -36,6 +36,10 @@ def run(
     force: bool = typer.Option(
         False, "--force", help="Force rerun of all rules (snakemake --forceall)"
     ),
+    unlock: bool = typer.Option(
+        False, "--unlock", help="snakemake --unlock"
+    ),
+
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
 
@@ -115,6 +119,9 @@ def run(
     ]
     if force:
         cmd.append("--forceall")
+    if unlock:
+        cmd.append("--unlock")
+
 
     typer.echo("Running:\n  " + " ".join(cmd))
 
