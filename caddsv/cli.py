@@ -11,9 +11,13 @@ app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring to
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+@app.command()
+def version():
+    print("CADD-SV version 2.0")
 
 
-def _cli(
+@app.command()
+def run(
     items: List[str] = typer.Argument(
         ...,
         help=(
@@ -142,7 +146,7 @@ def _cli(
 
 
 def main():
-    typer.run(_cli)
+    app()
 
 
 if __name__ == "__main__":

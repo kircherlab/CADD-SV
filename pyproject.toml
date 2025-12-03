@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-caddsv = "caddsv.cli:main"
+caddsv = "caddsv.cli:app"
 
 [tool.setuptools]
 package-dir = {"" = "."}
