@@ -142,7 +142,7 @@ def run(
         if dst.exists():
             dst.unlink()
 
-        # Always copy, no symlink
+        # Always copy, no symlink (to be changed because redundant)
         shutil.copy2(src, dst)
 
     typer.echo(f"Final scores written to: {outdir.resolve()}")

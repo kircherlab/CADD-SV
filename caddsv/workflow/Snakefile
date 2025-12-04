@@ -74,11 +74,28 @@ include: "rules/preprocessing.smk"
 include: "rules/annotations.smk"
 
 
+def targets(wildcards):
+    if config.get("mode", "training") == "scoring":
+        return expand(
+            "output/{sets}{formats}_score{flanks}.bed",
+            sets=config["dataset"], formats=config["format"], flanks=config["flank"]
+        )
+    elif config.get("mode", "training") == "training":
+        return expand(
+            "beds/{sets}/{sets}{formats}_generated_models{flanks}.txt",
+            sets=config["dataset"], formats=config["format"], flanks=config["flank"]
+        )
+    elif config.get("mode", "training") == "seqonly":
+        return expand(
+            "beds/{sets}/{sets}{formats}_generated_models_seqonly{flanks}.txt",
+            sets=config["dataset"], formats=config["format"], flanks=config["flank"]
+        )
+    else:
+        return expand(
+            "output/{sets}{formats}_score{flanks}.bed",
+            sets=config["dataset"], formats=config["format"], flanks=config["flank"]
+        )
+
 rule all:
     input:
-      matrix=expand("output/{sets}{formats}_score{flanks}.bed", sets=config["dataset"], formats=config["format"], flanks=config["flank"])
-      #matrix=expand("{sets}/{sets}{formats}_SBfinal{flanks}.bed", sets=config["dataset"], formats=config["format"], flanks=config["flank"]),
-      #matrix=expand("{sets}/{sets}{formats}_generated_models{flanks}.txt", sets=config["dataset"], formats=config["format"], flanks=config["flank"]),
-      #matrixup=expand("{sets}/{sets}{formats}_matrix.bedup{flanks}", sets=config["dataset"], formats=config["format"], flanks=config["flank"]),
-      #matrixdown=expand("{sets}/{sets}{formats}_matrix.beddown{flanks}", sets=config["dataset"], formats=config["format"], flanks=config["flank"]),
-      
+        matrix=targets
