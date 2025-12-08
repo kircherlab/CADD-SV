@@ -38,6 +38,8 @@ def run(
     force: bool = typer.Option(
         False, "--force", help="Force rerun of all rules (snakemake --forceall)"
     ),
+    sequence_model: bool = typer.Option(False, "--sequence_model", help="Optional to run the model with the integration of SegmentNT derived annotations"),
+
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
     ),
@@ -119,6 +121,7 @@ def run(
         "--config",
         f"dataset={datasets_value}",
         f"mode={mode}",
+        f"sequence_model={'True' if sequence_model else 'False'}",
     ]
     if force:
         cmd.append("--forceall")

@@ -548,72 +548,119 @@ rule complete_CB_annotation:
         <(cut -f4-5 {input.remapTF}) \
         <(cut -f4-13 {input.screen}) | cat {input.header} - > {output}
         """
-
-rule final_table:
-    input:
-        matrix="beds/{set}/{set}{format}_matrix.bed",
-        up="beds/{set}/{set}{format}_matrix.bedup{flanksize}",
-        down="beds/{set}/{set}{format}_matrix.beddown{flanksize}",
-        SB="beds/{set}/{set}{format}_DBfeatures.bed",
-        SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
-        SBtrue="beds/{set}/{set}{format}_SBfeatures.bed",
-        genome="annotations/ucsc/hg38.fa.sorted.genome",
-        
-    output:
-        CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
-        SB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
-
-    conda:
-        "../envs/SV.yml"
-    shell:
-        """
-        touch {input.SBtrue}
-        touch {input.SBref}
-        python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {output.CB} 
-        paste {output.CB} <(cut -f5- {input.SB}) > {output.SB}
-        """
-
-if config.get("mode", "training") == "training":
-    rule training_mode:
+if config["sequence_model"]:
+    rule final_table:
         input:
-            CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+            matrix="beds/{set}/{set}{format}_matrix.bed",
+            up="beds/{set}/{set}{format}_matrix.bedup{flanksize}",
+            down="beds/{set}/{set}{format}_matrix.beddown{flanksize}",
             SB="beds/{set}/{set}{format}_DBfeatures.bed",
-            XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
-            input="input/id_{set}.{format}",
-        output:
-            "beds/{set}/{set}{format}_generated_models{flanksize}.txt"
-        conda:
-            "../envs/training.yml"
-        shell:
-            """
-            python {workflow.basedir}/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
-            """
-elif config.get("mode", "scoring") == "scoring":
-    rule scoring_mode:
-        input:
-            input="input/id_{set}.{format}",
-            XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
-        output:
-            scored="output/{set}{format}_score{flanksize}.bed"
-        conda:
-            "../envs/training.yml"
-        shell:
-            """
-            python {workflow.basedir}/scripts/scoring.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
+            SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
+            SBtrue="beds/{set}/{set}{format}_SBfeatures.bed",
+            genome="annotations/ucsc/hg38.fa.sorted.genome",
             
-            """
-elif config.get("mode", "seqonly") == "seqonly":
-    rule seqonly_training:
-        input:
-            CB="beds/{set}/{set}{format}_SBreffeatures.bed",
-            SB="beds/{set}/{set}{format}_SBfeatures.bed",
-            XB="beds/{set}/{set}{format}_DBfeatures.bed",
-            input="input/id_{set}.{format}",
         output:
-            "beds/{set}/{set}{format}_generated_models_seqonly{flanksize}.txt"
+            CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+            SB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
+
         conda:
-            "../envs/training.yml"
+            "../envs/SV.yml"
         shell:
             """
-            python {workflow.basedir}/scripts/training_SBtests.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
+            touch {input.SBtrue}
+            touch {input.SBref}
+            python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {output.CB} 
+            paste {output.CB} <(cut -f5- {input.SB}) > {output.SB}
             """
+
+    if config.get("mode", "training") == "training":
+        rule training_mode:
+            input:
+                CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+                SB="beds/{set}/{set}{format}_DBfeatures.bed",
+                XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
+                input="input/id_{set}.{format}",
+            output:
+                "beds/{set}/{set}{format}_generated_models{flanksize}.txt"
+            conda:
+                "../envs/training.yml"
+            shell:
+                """
+                python {workflow.basedir}/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
+                """
+    elif config.get("mode", "scoring") == "scoring":
+        rule scoring_mode:
+            input:
+                input="input/id_{set}.{format}",
+                XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
+            output:
+                scored="output/{set}{format}_score{flanksize}.bed"
+            conda:
+                "../envs/training.yml"
+            shell:
+                """
+                python {workflow.basedir}/scripts/scoring.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
+                
+                """
+    elif config.get("mode", "seqonly") == "seqonly":
+        rule seqonly_training:
+            input:
+                CB="beds/{set}/{set}{format}_SBreffeatures.bed",
+                SB="beds/{set}/{set}{format}_SBfeatures.bed",
+                XB="beds/{set}/{set}{format}_DBfeatures.bed",
+                input="input/id_{set}.{format}",
+            output:
+                "beds/{set}/{set}{format}_generated_models_seqonly{flanksize}.txt"
+            conda:
+                "../envs/training.yml"
+            shell:
+                """
+                python {workflow.basedir}/scripts/training_SBtests.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
+                """
+else:
+    rule final_table:
+        input:
+            matrix="beds/{set}/{set}{format}_matrix.bed",
+            up="beds/{set}/{set}{format}_matrix.bedup{flanksize}",
+            down="beds/{set}/{set}{format}_matrix.beddown{flanksize}",
+            genome="annotations/ucsc/hg38.fa.sorted.genome",
+            
+        output:
+            CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+
+        conda:
+            "../envs/SV.yml"
+        shell:
+            """
+            python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {output.CB} 
+            """
+
+    if config.get("mode", "training") == "training":
+        rule training_mode: #Change the whole rule this should not work 
+            input:
+                CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+                SB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+                XB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+                input="input/id_{set}.{format}",
+            output:
+                "beds/{set}/{set}{format}_generated_models{flanksize}.txt"
+            conda:
+                "../envs/training.yml"
+            shell:
+                """
+                python {workflow.basedir}/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
+                """
+    elif config.get("mode", "scoring") == "scoring":
+        rule scoring_mode:
+            input:
+                input="input/id_{set}.{format}",
+                XB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
+            output:
+                scored="output/{set}{format}_score{flanksize}.bed"
+            conda:
+                "../envs/training.yml"
+            shell:
+                """
+                python {workflow.basedir}/scripts/scoring_CBonly.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
+                
+                """
