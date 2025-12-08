@@ -14,9 +14,21 @@ DEFAULT_CONFIG = PKG_DIR / "config.yml"
 
 
 @app.command()
-def version():
-    print("CADD-SV version 2.0")
+def get(
+        flag: str = typer.Argument(None)
+):
 
+    if flag == "annotations":
+        typer.echo("Downloading dependencies...")
+        subprocess.run(["wget",
+            "https://kircherlab.bihealth.org/download/CADD-SV/v2.0/dependencies.tar.gz"],
+            check=True)
+        typer.echo("Uncompressing dependencies...")
+        subprocess.run(["tar",
+            "-xf",
+            "dependencies.tar.gz"],
+            check=True)
+        typer.echo("DONE")
 
 @app.command()
 def run(
