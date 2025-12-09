@@ -32,11 +32,11 @@ names = ["XB", "DB"]
 # Hyperparameter grid (tuned for noisy data)
 param_grid = {
     'n_estimators': [500],
-    'min_samples_split': [5],
-    'min_samples_leaf': [2],
-    'max_leaf_nodes': [100],
-    'max_depth': [30],
-    'criterion': ['entropy'],
+    'min_samples_split': [2],
+    'min_samples_leaf': [5],
+    'max_leaf_nodes': [300],
+    'max_depth': [10],
+    'criterion': ['gini'],
     'max_features': ['sqrt'],
     'min_impurity_decrease': [0.0]
 }
