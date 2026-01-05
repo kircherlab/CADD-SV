@@ -13,7 +13,7 @@ def cadd_sv_read(file):
     y.iloc[:, 0] = y.iloc[:, 0].replace(to_replace='Y', value='24', regex=True)
     y = y.replace('.', 0)
     
-    for i in range(1, 172):
+    for i in range(1, y.shape[1]):
         y.iloc[:, i] = pd.to_numeric(y.iloc[:, i], errors='coerce')
     
     y = y.fillna(0)
@@ -62,14 +62,15 @@ def cadd_sv(matrix, up, down, genome):
     k.append(cadd_sv_read(down))
 
     k.append(k[1] + k[2])
-    k[3].iloc[:, 121] = np.minimum(k[2].iloc[:, 121], k[3].iloc[:, 121])
-    k[3].iloc[:, 122] = np.minimum(k[2].iloc[:, 122], k[3].iloc[:, 122])
-    k[3].iloc[:, 123] = np.minimum(k[2].iloc[:, 123], k[3].iloc[:, 123])
+    # Apply minimum for distance columns (values should not be summed across flanks)
+    dist_cols = [col for col in k[3].columns if col.endswith('_dist') or col.endswith('_distance')]
+    for col in dist_cols:
+        k[3][col] = np.minimum(k[2][col], k[3][col])
     
     y.append(k[0])
     y.append(k[3])
  
-    newy=k[0].join(k[3].iloc[:,3:131], lsuffix="", rsuffix=("_flank"))
+    newy=k[0].join(k[3].iloc[:,3:], lsuffix="", rsuffix=("_flank"))
     newy.iloc[:, 0] = newy.iloc[:, 0].replace(to_replace='23', value='X', regex=True)
     newy.iloc[:, 0] = newy.iloc[:, 0].replace(to_replace='24', value='Y', regex=True)
     y.append(newy)    
