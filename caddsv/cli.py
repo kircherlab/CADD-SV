@@ -90,54 +90,79 @@ def run(
                 name = stem
     
             target = input_dir / f"id_{name}.bed"
-    
-            if target.exists() and target.resolve() != bed_path:
-                raise typer.BadParameter(
-                    f"Input conflict: {target} already exists and does not match {bed_path}."
+
+            # Preprocess input file to a temp file first (filter + sort)
+            with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".bed") as tmp_f:
+                tmp_path = tmp_f.name
+                # 1) Clean/filter rows
+                with bed_path.open() as in_f:
+                    for line in in_f:
+                        line = line.rstrip("\n")
+                        if not line:
+                            continue  # skip empty lines
+
+                        fields = line.split("\t")
+                        if len(fields) < 4:
+                            # Not enough columns to have chr, start, end, SVtype
+                            continue
+
+                        chrom = fields[0]
+                        # Ensure chr prefix
+                        if not chrom.startswith("chr"):
+                            chrom = "chr" + chrom
+                        fields[0] = chrom
+
+                        # Keep only chr1-22, chrX, chrY
+                        if chrom not in allowed_chroms:
+                            continue
+
+                        svtype = fields[3]
+                        # Keep only DEL, DUP, INS, INV
+                        if svtype not in allowed_svtypes:
+                            continue
+
+                        tmp_f.write("\t".join(fields) + "\n")
+
+                tmp_f.flush()
+
+            # 2) Sort cleaned rows into a second temp file
+            with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".bed") as sorted_tmp:
+                sorted_tmp_path = sorted_tmp.name
+                subprocess.run(
+                    ["sort", "-k1,1", "-k2,2n", tmp_path],
+                    stdout=sorted_tmp,
+                    check=True,
                 )
-    
-            if not target.exists():
-                # Preprocess + sort BED into target
-                with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp_f:
-                    # 1) Clean/filter rows
-                    with bed_path.open() as in_f:
-                        for line in in_f:
-                            line = line.rstrip("\n")
-                            if not line:
-                                continue  # skip empty lines
-    
-                            fields = line.split("\t")
-                            if len(fields) < 4:
-                                # Not enough columns to have chr, start, end, SVtype
-                                continue
-    
-                            chrom = fields[0]
-                            # Ensure chr prefix
-                            if not chrom.startswith("chr"):
-                                chrom = "chr" + chrom
-                            fields[0] = chrom
-    
-                            # Keep only chr1-22, chrX, chrY
-                            if chrom not in allowed_chroms:
-                                continue
-    
-                            svtype = fields[3]
-                            # Keep only DEL, DUP, INS, INV
-                            if svtype not in allowed_svtypes:
-                                continue
-    
-                            tmp_f.write("\t".join(fields) + "\n")
-    
-                    tmp_f.flush()
-    
-                    # 2) Sort cleaned rows and write final BED
-                    with target.open("w") as out_f:
-                        subprocess.run(
-                            ["sort", "-k1,1", "-k2,2n", tmp_f.name],
-                            stdout=out_f,
-                            check=True,
-                        )
-    
+
+            # Clean up first temp file
+            os.unlink(tmp_path)
+
+            # Now compare preprocessed content with existing target
+            if target.exists():
+                # Compare content of preprocessed file with existing target
+                with open(sorted_tmp_path) as new_f:
+                    new_content = new_f.read()
+                with open(target) as existing_f:
+                    existing_content = existing_f.read()
+
+                if new_content == existing_content:
+                    # Same content after preprocessing, just reuse existing
+                    typer.echo(f"Using existing preprocessed file: {target}")
+                    os.unlink(sorted_tmp_path)
+                else:
+                    # Different content, ask user what to do
+                    typer.echo(f"File {target} already exists with different content.")
+                    overwrite = typer.confirm("Do you want to overwrite it?", default=False)
+                    if overwrite:
+                        shutil.move(sorted_tmp_path, target)
+                        typer.echo(f"Overwrote {target}")
+                    else:
+                        os.unlink(sorted_tmp_path)
+                        raise typer.Abort()
+            else:
+                # Target doesn't exist, just move the preprocessed file
+                shutil.move(sorted_tmp_path, target)
+
             datasets.append(name)
 
         else:
