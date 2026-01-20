@@ -38,6 +38,7 @@ def run(
         help=(
             "One or more inputs, each either:\n"
             "  - a BED file (e.g. variants.bed), or\n"
+            "  - a TSV file with --sequence-only (REF, ALT, [TYPE], [ID]), or\n"
             "  - a dataset name (e.g. longrange_cherie)\n\n"
             "BED files are automatically mapped to input/id_<name>.bed.\n"
             "For names, CADD-SV expects input/id_<name>.bed to exist."
@@ -52,12 +53,20 @@ def run(
         False, "--force", help="Force rerun of all rules (snakemake --forceall)"
     ),
     sequence_model: bool = typer.Option(False, "--sequence_model", help="Optional to run the model with the integration of SegmentNT derived annotations"),
-
+    sequence_only: bool = typer.Option(
+        False, "--sequence-only",
+        help="Sequence-only mode: input TSV with columns REF, ALT, [TYPE], [ID]. "
+             "Runs only SegmentNT, generates SB/SBref/DB features without coordinate-based annotations."
+    ),
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
     ),
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
+
+    # Override mode if sequence_only flag is set
+    if sequence_only:
+        mode = "seqonly"
 
     workdir = Path("beds")
     workdir.mkdir(exist_ok=True)
@@ -72,23 +81,63 @@ def run(
 
     allowed_chroms = {f"chr{i}" for i in range(1, 23)} | {"chrX", "chrY"}
     allowed_svtypes = {"DEL", "DUP", "INS", "INV"}
-    
+
     for raw in items:
         p = Path(raw)
-    
-        if p.suffix.lower() == ".bed":
-    
+
+        # Handle sequence-only mode (TSV input)
+        if sequence_only:
+            if p.suffix.lower() != ".tsv":
+                raise typer.BadParameter(
+                    f"Sequence-only mode requires .tsv files, got '{p}'"
+                )
             if not p.exists():
-                raise typer.BadParameter(f"BED file '{p}' does not exist.")
-    
-            bed_path = p.resolve()
-            stem = bed_path.stem
-    
+                raise typer.BadParameter(f"TSV file '{p}' does not exist.")
+
+            tsv_path = p.resolve()
+            stem = tsv_path.stem
             if stem.startswith("id_"):
                 name = stem[3:]
             else:
                 name = stem
-    
+
+            target = input_dir / f"id_{name}.tsv"
+
+            # For TSV, just copy if different (no sorting needed)
+            if target.exists():
+                with open(tsv_path) as new_f:
+                    new_content = new_f.read()
+                with open(target) as existing_f:
+                    existing_content = existing_f.read()
+
+                if new_content == existing_content:
+                    typer.echo(f"Using existing file: {target}")
+                else:
+                    typer.echo(f"File {target} already exists with different content.")
+                    overwrite = typer.confirm("Do you want to overwrite it?", default=False)
+                    if overwrite:
+                        shutil.copy2(tsv_path, target)
+                        typer.echo(f"Overwrote {target}")
+                    else:
+                        raise typer.Abort()
+            else:
+                shutil.copy2(tsv_path, target)
+
+            datasets.append(name)
+
+        elif p.suffix.lower() == ".bed":
+
+            if not p.exists():
+                raise typer.BadParameter(f"BED file '{p}' does not exist.")
+
+            bed_path = p.resolve()
+            stem = bed_path.stem
+
+            if stem.startswith("id_"):
+                name = stem[3:]
+            else:
+                name = stem
+
             target = input_dir / f"id_{name}.bed"
 
             # Preprocess input file to a temp file first (filter + sort)
@@ -168,12 +217,15 @@ def run(
         else:
 
             name = raw
-            expected = input_dir / f"id_{name}.bed"
+            if sequence_only:
+                expected = input_dir / f"id_{name}.tsv"
+            else:
+                expected = input_dir / f"id_{name}.bed"
             if not expected.exists():
                 raise typer.BadParameter(
                     f"'{name}' looks like a dataset name, but {expected} does not exist.\n"
                     f"Either:\n"
-                    f"  - call CADD-SV with a BED file (recommended), e.g. 'caddsv {name}.bed'\n"
+                    f"  - call CADD-SV with a BED/TSV file (recommended), e.g. 'caddsv {name}.bed'\n"
                     f"  - create {expected} manually."
                 )
             datasets.append(name)
@@ -209,20 +261,39 @@ def run(
 
     subprocess.run(cmd, check=True, env=env)
 
-    for name in datasets:
-        src = Path("output") / f"{name}bed_score100.bed"
-        if not src.exists():
-            raise typer.Exit(code=1)
+    # Handle output based on mode
+    if sequence_only:
+        # Sequence-only mode: copy scored output to scored/ directory
+        for name in datasets:
+            src = Path("output") / f"{name}_seqonly_score.tsv"
+            if not src.exists():
+                typer.echo(f"Warning: Expected output {src} not found.")
+                raise typer.Exit(code=1)
 
-        dst = outdir / f"{name}_score.tsv"
+            dst = outdir / f"{name}_seqonly_score.tsv"
 
-        if dst.exists():
-            dst.unlink()
+            if dst.exists():
+                dst.unlink()
 
-        # Always copy, no symlink (to be changed because redundant)
-        shutil.copy2(src, dst)
+            shutil.copy2(src, dst)
 
-    typer.echo(f"Final scores written to: {outdir.resolve()}")
+        typer.echo(f"Sequence-only scores written to: {outdir.resolve()}")
+    else:
+        # Standard scoring mode
+        for name in datasets:
+            src = Path("output") / f"{name}bed_score100.bed"
+            if not src.exists():
+                raise typer.Exit(code=1)
+
+            dst = outdir / f"{name}_score.tsv"
+
+            if dst.exists():
+                dst.unlink()
+
+            # Always copy, no symlink (to be changed because redundant)
+            shutil.copy2(src, dst)
+
+        typer.echo(f"Final scores written to: {outdir.resolve()}")
 
 
 def main():

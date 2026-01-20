@@ -72,6 +72,7 @@ wildcard_constraints:
 include: "rules/fileprep.smk"
 include: "rules/preprocessing.smk"
 include: "rules/annotations.smk"
+include: "rules/seqonly.smk"
 
 
 def targets(wildcards):
@@ -86,9 +87,10 @@ def targets(wildcards):
             sets=config["dataset"], formats=config["format"], flanks=config["flank"]
         )
     elif config.get("mode", "training") == "seqonly":
+        # Sequence-only mode: score using seqonlymodel with SB, SBref, DB features
         return expand(
-            "beds/{sets}/{sets}{formats}_generated_models_seqonly{flanks}.txt",
-            sets=config["dataset"], formats=config["format"], flanks=config["flank"]
+            "output/{sets}_seqonly_score.tsv",
+            sets=config["dataset"]
         )
     else:
         return expand(
