@@ -123,12 +123,37 @@ def main():
                 continue
 
             # Required columns
-            ref_seq = parts[0]
-            alt_seq = parts[1]
+            ref_seq = parts[0].upper().strip()
+            alt_seq = parts[1].upper().strip()
 
             # Optional columns with defaults
             sv_type = parts[2] if len(parts) > 2 and parts[2].strip() else "SV"
             id_ = parts[3] if len(parts) > 3 and parts[3].strip() else f"var_{line_idx}"
+
+            # Validate flanking regions match (first and last 96bp)
+            flank_size = 96
+            ref_upstream = ref_seq[:flank_size] if len(ref_seq) >= flank_size else ref_seq
+            alt_upstream = alt_seq[:flank_size] if len(alt_seq) >= flank_size else alt_seq
+            ref_downstream = ref_seq[-flank_size:] if len(ref_seq) >= flank_size else ref_seq
+            alt_downstream = alt_seq[-flank_size:] if len(alt_seq) >= flank_size else alt_seq
+
+            if ref_upstream != alt_upstream:
+                sys.stderr.write(
+                    f"[preprocess_sequences] Error line {line_idx} (ID: {id_}): "
+                    f"first {flank_size}bp of REF and ALT do not match.\n"
+                    f"  REF: {ref_upstream[:50]}{'...' if len(ref_upstream) > 50 else ''}\n"
+                    f"  ALT: {alt_upstream[:50]}{'...' if len(alt_upstream) > 50 else ''}\n"
+                )
+                sys.exit(1)
+
+            if ref_downstream != alt_downstream:
+                sys.stderr.write(
+                    f"[preprocess_sequences] Error line {line_idx} (ID: {id_}): "
+                    f"last {flank_size}bp of REF and ALT do not match.\n"
+                    f"  REF: {ref_downstream[:50]}{'...' if len(ref_downstream) > 50 else ''}\n"
+                    f"  ALT: {alt_downstream[:50]}{'...' if len(alt_downstream) > 50 else ''}\n"
+                )
+                sys.exit(1)
 
             # Process sequences
             processed_alt = process_sequence(alt_seq)
