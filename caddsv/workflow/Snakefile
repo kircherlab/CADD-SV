@@ -10,6 +10,8 @@ def as_list(x):
         return list(x)
     if x is None:
         return []
+    if isinstance(x, str) and "," in x:
+        return x.split(",")
     return [x]
 
 DATASETS = as_list(config.get("dataset", []))
