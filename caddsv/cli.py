@@ -6,12 +6,19 @@ import tempfile
 import typer
 import os
 import shutil
+import time
+from datetime import datetime
+import resource
 
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
 
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+
+
+def format_seconds(value: float) -> str:
+    return f"{value:.2f}s"
 
 
 @app.command()
@@ -60,6 +67,11 @@ def run(
     ),
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
+    ),
+    check_time: bool = typer.Option(
+        False,
+        "--check-time",
+        help="Track time and resource usage; log to a .log file.",
     ),
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
@@ -259,7 +271,44 @@ def run(
     env = os.environ.copy()
     env["PYTHONNOUSERSITE"] = "1"
 
-    subprocess.run(cmd, check=True, env=env)
+    if check_time:
+        start_wall = time.perf_counter()
+        start_usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+        started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        result = subprocess.run(cmd, env=env)
+
+        end_wall = time.perf_counter()
+        end_usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+
+        wall_time = end_wall - start_wall
+        user_time = end_usage.ru_utime - start_usage.ru_utime
+        sys_time = end_usage.ru_stime - start_usage.ru_stime
+        cpu_time = user_time + sys_time
+        cpu_pct = (cpu_time / wall_time * 100.0) if wall_time > 0 else 0.0
+
+        log_lines = [
+            f"[{started_at}] CADD-SV resource summary",
+            f"Command: {' '.join(cmd)}",
+            f"Return code: {result.returncode}",
+            f"Wall time: {format_seconds(wall_time)}",
+            f"CPU time: {format_seconds(cpu_time)} (user: {format_seconds(user_time)}, sys: {format_seconds(sys_time)})",
+            f"CPU utilization: {cpu_pct:.1f}%",
+            f"Max RSS (children, platform-dependent units): {end_usage.ru_maxrss}",
+        ]
+
+        for line in log_lines:
+            typer.echo(line)
+
+        log_path = Path(f"caddsv_run_{log_stamp}.log")
+        log_path.write_text("\n".join(log_lines) + "\n")
+        typer.echo(f"Resource log written to: {log_path.resolve()}")
+
+        if result.returncode != 0:
+            raise typer.Exit(code=result.returncode)
+    else:
+        subprocess.run(cmd, check=True, env=env)
 
     # Handle output based on mode
     if sequence_only:
