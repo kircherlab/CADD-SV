@@ -6,5 +6,6 @@ flank:
         - 100
 
 mode: scoring
-sequence_model: false 
+sequence_model: false
+all_scores: false
 ...

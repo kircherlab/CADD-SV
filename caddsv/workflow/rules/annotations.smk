@@ -589,19 +589,36 @@ if config["sequence_model"]:
                 python {workflow.basedir}/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
                 """
     elif config.get("mode", "scoring") == "scoring":
-        rule scoring_mode:
-            input:
-                input="input/id_{set}.{format}",
-                XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
-            output:
-                scored="output/{set}{format}_score{flanksize}.bed"
-            conda:
-                "../envs/training.yml"
-            shell:
-                """
-                python {workflow.basedir}/scripts/scoring.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
-                
-                """
+        if config.get("all_scores", False):
+            rule scoring_mode:
+                input:
+                    input="input/id_{set}.{format}",
+                    XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
+                    SB="beds/{set}/{set}{format}_SBfeatures.bed",
+                    SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
+                    DB="beds/{set}/{set}{format}_DBfeatures.bed",
+                output:
+                    scored="output/{set}{format}_score{flanksize}.bed"
+                conda:
+                    "../envs/training.yml"
+                shell:
+                    """
+                    python {workflow.basedir}/scripts/scoring_allscores.py <(cut -f1-4 {input.input}) {input.XB} {input.SB} {input.SBref} {input.DB} {output.scored}
+                    """
+        else:
+            rule scoring_mode:
+                input:
+                    input="input/id_{set}.{format}",
+                    XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
+                output:
+                    scored="output/{set}{format}_score{flanksize}.bed"
+                conda:
+                    "../envs/training.yml"
+                shell:
+                    """
+                    python {workflow.basedir}/scripts/scoring.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
+
+                    """
     elif config.get("mode", "seqonly") == "seqonly":
         rule seqonly_training:
             input:

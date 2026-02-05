@@ -59,11 +59,16 @@ def run(
     force: bool = typer.Option(
         False, "--force", help="Force rerun of all rules (snakemake --forceall)"
     ),
-    sequence_model: bool = typer.Option(False, "--sequence_model", help="Optional to run the model with the integration of SegmentNT derived annotations"),
+    sequence_model: bool = typer.Option(False, "--seqresolved", help="Optional to run the model with the integration of SegmentNT derived annotations"),
     sequence_only: bool = typer.Option(
         False, "--sequence-only",
         help="Sequence-only mode: input TSV with columns REF, ALT, [TYPE], [ID]. "
              "Runs only SegmentNT, generates SB/SBref/DB features without coordinate-based annotations."
+    ),
+    all_scores: bool = typer.Option(
+        False, "--allscores",
+        hidden=True,
+        help="Run all scoring models: default, sequence-resolved, and sequence-only."
     ),
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
@@ -79,6 +84,10 @@ def run(
     # Override mode if sequence_only flag is set
     if sequence_only:
         mode = "seqonly"
+
+    # all_scores implies sequence_model
+    if all_scores:
+        sequence_model = True
 
     workdir = Path("beds")
     workdir.mkdir(exist_ok=True)
@@ -260,6 +269,7 @@ def run(
         f"dataset={datasets_value}",
         f"mode={mode}",
         f"sequence_model={'True' if sequence_model else 'False'}",
+        f"all_scores={'True' if all_scores else 'False'}",
     ]
     if force:
         cmd.append("--forceall")
