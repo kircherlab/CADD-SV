@@ -67,13 +67,17 @@ sb_features = sb_df.drop(columns=id_cols, errors='ignore')
 sbref_features = sbref_df.drop(columns=id_cols, errors='ignore')
 db_features = db_df.drop(columns=id_cols, errors='ignore')
 
-# Rename columns to match seqonly model expectations
-sb_features.columns = [f"SB_{c}" for c in sb_features.columns]
-sbref_features.columns = [f"SBref_{c}" for c in sbref_features.columns]
-db_features.columns = [f"DB_{c}" for c in db_features.columns]
+# Rename columns to match seqonly model expectations:
+# - Sample (SB): no prefix
+# - Reference (SBref): _alt suffix
+# - DB: no prefix
+sbref_features.columns = [f"{c}_alt" for c in sbref_features.columns]
 
 # Combine for seqonly model
 combined_seqonly = pd.concat([sb_features, sbref_features, db_features], axis=1)
+
+# Add copies feature (required by seqonly model)
+combined_seqonly["copies"] = np.where(copies_svdata.iloc[:, 3].values == "DEL", -1, 1)
 
 # Score with seqonly model
 try:

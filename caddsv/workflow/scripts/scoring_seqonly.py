@@ -53,13 +53,17 @@ sb_features = sb_df.drop(columns=id_cols)
 sbref_features = sbref_df.drop(columns=id_cols)
 db_features = db_df.drop(columns=id_cols)
 
-# Rename columns to avoid collisions
-sb_features.columns = [f"SB_{c}" for c in sb_features.columns]
-sbref_features.columns = [f"SBref_{c}" for c in sbref_features.columns]
-db_features.columns = [f"DB_{c}" for c in db_features.columns]
+# Rename columns to match model expectations:
+# - Sample (SB): no prefix
+# - Reference (SBref): _alt suffix
+# - DB: no prefix
+sbref_features.columns = [f"{c}_alt" for c in sbref_features.columns]
 
 # Combine all features
 combined = pd.concat([sb_features, sbref_features, db_features], axis=1)
+
+# Add copies feature
+combined["copies"] = np.where(ids["type"].values == "DEL", -1, 1)
 
 # Select features the model was trained on
 try:
