@@ -57,7 +57,7 @@ caddsv run file.bed
 To run the model with integration of SegmentNT-derived annotations, enable the sequence-based model:
 
 ```bash
-caddsv run file.bed --sequence_model
+caddsv run file.bed --seqresolved
 ```
 
 This flag propagates directly into the Snakemake configuration as `sequence_model=True`.
