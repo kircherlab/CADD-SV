@@ -2,7 +2,7 @@
 rule CTCF:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/CTCF/Wangetal_hg38.bed", # should I move it?
+        anno=ANNOT_DIR + "/CTCF/Wangetal_hg38.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -15,7 +15,7 @@ rule CTCF:
 rule ultraconserved:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/ultraconserved/ultraconserved_hg38_muliz120M_sort.bed",
+        anno=ANNOT_DIR + "/ultraconserved/ultraconserved_hg38_muliz120M_sort.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -29,7 +29,7 @@ rule ultraconserved:
 rule GC:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/GC/gc5Base.bedGraph.gz",
+        anno=ANNOT_DIR + "/GC/gc5Base.bedGraph.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -44,7 +44,7 @@ rule gene_model_tmp:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
         merg="beds/{set}/{set}{format}_nochr_merged.{bedflanks}",
-        anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.gtf.gz",
+        anno=ANNOT_DIR + "/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.gtf.gz",
     conda:
         "../envs/SV.yml"
     output:
@@ -71,7 +71,7 @@ rule gene_model:
 rule gene_model_dist:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.bed",
+        anno=ANNOT_DIR + "/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -86,7 +86,7 @@ rule gene_model_dist:
 rule gene_names:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.GENES.bed",
+        anno=ANNOT_DIR + "/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.GENES.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -100,7 +100,7 @@ rule gene_names:
 rule pli:
     input:
         gn="beds/{set}/{set}{format}_genenames.{bedflanks}",
-        pli="annotations/gnomad/pli_exac.csv",
+        pli=ANNOT_DIR + "/gnomad/pli_exac.csv",
     conda:
         "../envs/SV.yml"
     output:
@@ -115,7 +115,7 @@ rule pli:
 rule cadd_PC_phylop:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/PhastCons/CADD_PC_PhyloP_scores.bed.gz",
+        anno=ANNOT_DIR + "/PhastCons/CADD_PC_PhyloP_scores.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -128,7 +128,7 @@ rule cadd_PC_phylop:
 rule cadd_features_1_7:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/CADD/summarized_cadd_features.bed.gz",
+        anno=ANNOT_DIR + "/CADD/summarized_cadd_features.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -142,7 +142,7 @@ rule cadd_features_1_7:
 rule cadd2:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/CADD/CADD_GRCh38-v1.7.bedGraph_10PHRED.bed.gz",
+        anno=ANNOT_DIR + "/CADD/CADD_GRCh38-v1.7.bedGraph_10PHRED.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -155,7 +155,7 @@ rule cadd2:
 rule gerp:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
+        anno=ANNOT_DIR + "/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -168,7 +168,7 @@ rule gerp:
 rule gerp2:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
+        anno=ANNOT_DIR + "/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -182,7 +182,7 @@ rule gerp2:
 rule LINSIGHT:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/linsight/LINSIGHT_hg38_sort.bed.gz",
+        anno=ANNOT_DIR + "/linsight/LINSIGHT_hg38_sort.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -196,7 +196,7 @@ rule LINSIGHT:
 rule EP:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        ep="annotations/enhancer-promoter-links/sorted_encode.bed",
+        ep=ANNOT_DIR + "/enhancer-promoter-links/sorted_encode.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -210,7 +210,7 @@ rule EP:
 rule fire:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/FIRE/fire_{celllines}.bed",
+        anno=ANNOT_DIR + "/FIRE/fire_{celllines}.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -234,7 +234,7 @@ rule fire2:
 rule HIC_hESC:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        hic="annotations/hic/hESC/combined/sorted.total.combined.domain",
+        hic=ANNOT_DIR + "/hic/hESC/combined/sorted.total.combined.domain",
     conda:
         "../envs/SV.yml"
     output:
@@ -248,7 +248,7 @@ rule HIC_hESC:
 rule HIC_encode:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        hic="annotations/Encode-HIC/{cells}/sorted_{tad}.bed.gz",
+        hic=ANNOT_DIR + "/Encode-HIC/{cells}/sorted_{tad}.bed.gz",
     conda:
         "../envs/SV.yml"
     output:
@@ -272,7 +272,7 @@ rule mergetad:
 rule microsynteny:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        hic="annotations/synteny/microsynteny.bed",
+        hic=ANNOT_DIR + "/synteny/microsynteny.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -286,7 +286,7 @@ rule microsynteny:
 rule ccr:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/ccr/ccrs.all.bed.gz",
+        anno=ANNOT_DIR + "/ccr/ccrs.all.bed.gz",
     conda:
         "../envs/SV.yml"
     output:
@@ -300,7 +300,7 @@ rule ccr:
 rule genomegitar1:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/genomegitar/{gg}/DI_sort.bed",
+        anno=ANNOT_DIR + "/genomegitar/{gg}/DI_sort.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -334,7 +334,7 @@ rule genomegitar3:
 rule MPC:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/MPC/transcript_constraints_hg38liftover.bg.gz",
+        anno=ANNOT_DIR + "/MPC/transcript_constraints_hg38liftover.bg.gz",
     conda:
         "../envs/SV.yml"
     output:
@@ -347,7 +347,7 @@ rule MPC:
 rule zoonomia:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/zoonomia/cleaned_summarized_zoonomia.bed.gz",
+        anno=ANNOT_DIR + "/zoonomia/cleaned_summarized_zoonomia.bed.gz",
     conda:
         "../envs/SV.yml"
     output:
@@ -360,7 +360,7 @@ rule zoonomia:
 rule boundary_score:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/boundary_score/boundary_score.bed.gz",
+        anno=ANNOT_DIR + "/boundary_score/boundary_score.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -373,7 +373,7 @@ rule boundary_score:
 rule screen:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/screen/GRCh38-cCREs_sorted.bed.gz",
+        anno=ANNOT_DIR + "/screen/GRCh38-cCREs_sorted.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -387,7 +387,7 @@ rule screen:
 rule RemapTF:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/ReMap/reMapDensity2022.bed.gz",
+        anno=ANNOT_DIR + "/ReMap/reMapDensity2022.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -402,7 +402,7 @@ rule encode:
     input:
         merg="beds/{set}/{set}{format}_nochr_merged.{bedflanks}",
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno= "annotations/encode/{encodes}/{encodes}_merged_90quant.bed.gz",
+        anno=ANNOT_DIR + "/encode/{encodes}/{encodes}_merged_90quant.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -424,7 +424,7 @@ rule encode2:
 rule chromHMM_MAX:
     input:
         bed="beds/{set}/{set}{format}_nochr.{bedflanks}",
-        anno="annotations/chromhmm/chromHMM_GRCh38.bg.gz",
+        anno=ANNOT_DIR + "/chromhmm/chromHMM_GRCh38.bg.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -438,7 +438,7 @@ rule chromHMM_MAX:
 rule Fantom5_counts:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/fantom5/F5.hg38.enhancers_sort.bed",
+        anno=ANNOT_DIR + "/fantom5/F5.hg38.enhancers_sort.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -452,7 +452,7 @@ rule Fantom5_counts:
 rule HI:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/DDD_HI/hg38_HI_Predictions_version3_sort.bed",
+        anno=ANNOT_DIR + "/DDD_HI/hg38_HI_Predictions_version3_sort.bed",
     conda:
         "../envs/SV.yml"
     output:
@@ -465,7 +465,7 @@ rule HI:
 rule deepc:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
-        anno="annotations/deepc/saliencies_merged_gm12878_5kb_10bp.bed.gz",
+        anno=ANNOT_DIR + "/deepc/saliencies_merged_gm12878_5kb_10bp.bed.gz",
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -509,7 +509,7 @@ rule complete_CB_annotation:
         zoonomia="beds/{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}",
         boundary_score="beds/{set}/{set}{format}_boundary_score_count_sum.{bedflanks}",
         screen="beds/{set}/{set}{format}_screen_counts.{bedflanks}",
-        header="annotations/header.txt",
+        header=ANNOT_DIR + "/header.txt",
     output:
         "beds/{set}/{set}{format}_matrix.{bedflanks}",
     conda:
@@ -557,7 +557,7 @@ if config["sequence_model"]:
             SB="beds/{set}/{set}{format}_DBfeatures.bed",
             SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
             SBtrue="beds/{set}/{set}{format}_SBfeatures.bed",
-            genome="annotations/ucsc/hg38.fa.sorted.genome",
+            genome=ANNOT_DIR + "/ucsc/hg38.fa.sorted.genome",
             
         output:
             CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
@@ -640,7 +640,7 @@ else:
             matrix="beds/{set}/{set}{format}_matrix.bed",
             up="beds/{set}/{set}{format}_matrix.bedup{flanksize}",
             down="beds/{set}/{set}{format}_matrix.beddown{flanksize}",
-            genome="annotations/ucsc/hg38.fa.sorted.genome",
+            genome=ANNOT_DIR + "/ucsc/hg38.fa.sorted.genome",
             
         output:
             CB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",

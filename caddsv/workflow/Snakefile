@@ -18,6 +18,7 @@ DATASETS = as_list(config.get("dataset", []))
 FORMAT = as_list(config.get("format", ["bed"]))[0]
 FLANK = int(as_list(config.get("flank", [100]))[0])
 MODE = config.get("mode", "scoring")
+ANNOT_DIR = config.get("annotations_dir", "annotations")
 
 
 CELLS = ["A549", "Caki2"]

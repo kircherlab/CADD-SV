@@ -3,7 +3,7 @@ gpu_available = bool(os.environ.get("CUDA_VISIBLE_DEVICES"))
 rule prep_files:
     input:
         bed="input/id_{set}.{format}",
-        genome="annotations/ucsc/hg38.fa.bgz"
+        genome=ANNOT_DIR + "/ucsc/hg38.fa.bgz"
     conda:
         "../envs/preprocessing.yml"
     output:
@@ -22,7 +22,7 @@ rule prep_files:
 rule flanks:
     input:
         CB="beds/{set}/{set}{format}_CBinput.bed",
-        genome="annotations/ucsc/hg38.fa.sorted.genome",
+        genome=ANNOT_DIR + "/ucsc/hg38.fa.sorted.genome",
     conda:
         "../envs/SV.yml"
     params:

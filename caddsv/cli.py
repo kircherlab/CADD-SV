@@ -23,10 +23,17 @@ def format_seconds(value: float) -> str:
 
 @app.command()
 def get(
-        flag: str = typer.Argument(None)
+        flag: str = typer.Argument(None),
+        annotations_dir: Optional[Path] = typer.Option(
+            None, "--annotations-dir",
+            help="Directory to store annotations (default: ./annotations)"
+        ),
 ):
 
     if flag == "annotations":
+        target = Path(annotations_dir).resolve() if annotations_dir else Path("annotations").resolve()
+        target.mkdir(parents=True, exist_ok=True)
+
         typer.echo("Downloading dependencies...")
         subprocess.run(["wget",
             "https://kircherlab.bihealth.org/download/CADD-SV/v2.0/dependencies.tar.gz"],
@@ -34,8 +41,12 @@ def get(
         typer.echo("Uncompressing dependencies...")
         subprocess.run(["tar",
             "-xf",
-            "dependencies.tar.gz"],
+            "dependencies.tar.gz",
+            "--strip-components=1",
+            "-C", str(target)],
             check=True)
+        os.remove("dependencies.tar.gz")
+        typer.echo(f"Annotations extracted to: {target}")
         typer.echo("DONE")
 
 @app.command()
@@ -73,6 +84,10 @@ def run(
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
     ),
+    annotations_dir: Optional[Path] = typer.Option(
+        None, "--annotations-dir",
+        help="Path to annotation directory (default: ./annotations)"
+    ),
     check_time: bool = typer.Option(
         False,
         "--check-time",
@@ -80,6 +95,7 @@ def run(
     ),
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
+    annot_dir = str(Path(annotations_dir).resolve()) if annotations_dir else str(Path("annotations").resolve())
 
     # Override mode if sequence_only flag is set
     if sequence_only:
@@ -270,6 +286,7 @@ def run(
         f"mode={mode}",
         f"sequence_model={'True' if sequence_model else 'False'}",
         f"all_scores={'True' if all_scores else 'False'}",
+        f"annotations_dir={annot_dir}",
     ]
     if force:
         cmd.append("--forceall")
