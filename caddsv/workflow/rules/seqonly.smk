@@ -124,4 +124,5 @@ rule seqonly_scoring:
         """
         mkdir -p output
         python {workflow.basedir}/scripts/scoring_seqonly.py {input.SB} {input.SBref} {input.DB} {output}
+        python {workflow.basedir}/scripts/add_phred.py {output}
         """

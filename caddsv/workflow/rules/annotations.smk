@@ -604,6 +604,7 @@ if config["sequence_model"]:
                 shell:
                     """
                     python {workflow.basedir}/scripts/scoring_allscores.py <(cut -f1-4 {input.input}) {input.XB} {input.SB} {input.SBref} {input.DB} {output.scored}
+                    python {workflow.basedir}/scripts/add_phred.py {output.scored}
                     """
         else:
             rule scoring_mode:
@@ -617,7 +618,7 @@ if config["sequence_model"]:
                 shell:
                     """
                     python {workflow.basedir}/scripts/scoring.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
-
+                    python {workflow.basedir}/scripts/add_phred.py {output.scored}
                     """
     elif config.get("mode", "seqonly") == "seqonly":
         rule seqonly_training:
@@ -679,5 +680,5 @@ else:
             shell:
                 """
                 python {workflow.basedir}/scripts/scoring_CBonly.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
-                
+                python {workflow.basedir}/scripts/add_phred.py {output.scored}
                 """

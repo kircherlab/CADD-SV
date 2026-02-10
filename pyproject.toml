@@ -28,6 +28,7 @@ caddsv = [
   "workflow/rules/*.smk",
   "workflow/envs/*.yml",
   "workflow/models/*.joblib",
+  "workflow/models/*_PHRED.tsv",
   "workflow/scripts/*.py",
   "workflow/scripts/*.sh",
   "config.yml",
