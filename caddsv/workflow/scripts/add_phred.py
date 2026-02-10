@@ -44,16 +44,30 @@ def add_phred(scored_path):
         sys.stderr.write("[add_phred] No score columns found, skipping PHRED scaling.\n")
         return
 
-    # Load PHRED tables for each SV type present in the data
+    # Load PHRED tables for each SV type present in the data, pre-sorted
+    # by each score column so we don't re-sort inside the inner loop.
     phred_tables = {}
     for sv_type in df["type"].unique():
         phred_path = MODEL_DIR / f"{sv_type}_PHRED.tsv"
         if phred_path.exists():
-            phred_tables[sv_type] = pd.read_table(phred_path)
+            ptable = pd.read_table(phred_path)
+            sorted_cache = {}
+            for _, phred_table_col in score_cols:
+                if phred_table_col in ptable.columns:
+                    sorted_pt = ptable.sort_values(phred_table_col).reset_index(drop=True)
+                    sorted_cache[phred_table_col] = (
+                        sorted_pt[phred_table_col].values,
+                        sorted_pt["PHRED"].values,
+                    )
+            if sorted_cache:
+                phred_tables[sv_type] = sorted_cache
 
     if not phred_tables:
         sys.stderr.write("[add_phred] No PHRED tables found, skipping.\n")
         return
+
+    # Pre-compute type masks once
+    type_masks = {sv_type: df["type"] == sv_type for sv_type in phred_tables}
 
     # Build PHRED columns and insert right before each score column.
     # Process in reverse column-position order so inserts don't shift indices.
@@ -64,20 +78,16 @@ def add_phred(scored_path):
 
         phred_values = pd.Series(np.nan, index=df.index)
 
-        for sv_type, ptable in phred_tables.items():
-            if phred_table_col not in ptable.columns:
+        for sv_type, sorted_cache in phred_tables.items():
+            if phred_table_col not in sorted_cache:
                 continue
 
-            mask = df["type"] == sv_type
+            mask = type_masks[sv_type]
             if not mask.any():
                 continue
 
+            sorted_scores, sorted_phred = sorted_cache[phred_table_col]
             raw_scores = df.loc[mask, output_col].values
-
-            # Sort PHRED table by score ascending for searchsorted
-            sorted_pt = ptable.sort_values(phred_table_col).reset_index(drop=True)
-            sorted_scores = sorted_pt[phred_table_col].values
-            sorted_phred = sorted_pt["PHRED"].values
 
             nan_mask = np.isnan(raw_scores.astype(float))
             safe_raw = np.where(nan_mask, 0.0, raw_scores.astype(float))
