@@ -10,8 +10,6 @@ import time
 from datetime import datetime
 import resource
 
-from caddsv.workflow.scripts.scale_features import scale_features
-
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
 
 PKG_DIR = Path(__file__).resolve().parent
@@ -374,6 +372,7 @@ def run(
         typer.echo(f"Sequence-only scores written to: {outdir.resolve()}")
 
         if scaled_features:
+            from caddsv.workflow.scripts.scale_features import scale_features
             for name in datasets:
                 scored = outdir / f"{name}_seqonly_score.tsv"
                 scaled = outdir / f"{name}_seqonly_scaled.tsv"
@@ -396,6 +395,7 @@ def run(
         typer.echo(f"Final scores written to: {outdir.resolve()}")
 
         if scaled_features:
+            from caddsv.workflow.scripts.scale_features import scale_features
             for name in datasets:
                 scored = outdir / f"{name}_score.tsv"
                 scaled = outdir / f"{name}_scaled.tsv"
@@ -419,6 +419,7 @@ def scale(
     ),
 ):
     """Generate z-score scaled features from scored CADD-SV output files."""
+    from caddsv.workflow.scripts.scale_features import scale_features
     sdir = Path(stats_dir) if stats_dir else MODELS_DIR
 
     for raw in items:
