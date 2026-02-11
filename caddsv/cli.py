@@ -10,10 +10,13 @@ import time
 from datetime import datetime
 import resource
 
+from caddsv.workflow.scripts.scale_features import scale_features
+
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
 
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
+MODELS_DIR = WORKFLOW_DIR / "models"
 CONDA_ENV_DIR = PKG_DIR / ".snakemake-envs"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
 
@@ -92,6 +95,11 @@ def run(
     output_dir: Optional[Path] = typer.Option(
         None, "--output-dir", "-o",
         help="Results directory (default: ./caddsv_results)"
+    ),
+    scaled_features: bool = typer.Option(
+        False,
+        "--scaled-features",
+        help="Generate z-score scaled features for interpretation (*_scaled.tsv)",
     ),
     check_time: bool = typer.Option(
         False,
@@ -363,6 +371,13 @@ def run(
             shutil.copy2(src, dst)
 
         typer.echo(f"Sequence-only scores written to: {outdir.resolve()}")
+
+        if scaled_features:
+            for name in datasets:
+                scored = outdir / f"{name}_seqonly_score.tsv"
+                scaled = outdir / f"{name}_seqonly_scaled.tsv"
+                scale_features(str(scored), str(scaled), MODELS_DIR)
+            typer.echo(f"Scaled features written to: {outdir.resolve()}")
     else:
         # Standard scoring mode
         for name in datasets:
@@ -378,6 +393,54 @@ def run(
             shutil.copy2(src, dst)
 
         typer.echo(f"Final scores written to: {outdir.resolve()}")
+
+        if scaled_features:
+            for name in datasets:
+                scored = outdir / f"{name}_score.tsv"
+                scaled = outdir / f"{name}_scaled.tsv"
+                scale_features(str(scored), str(scaled), MODELS_DIR)
+            typer.echo(f"Scaled features written to: {outdir.resolve()}")
+
+
+@app.command()
+def scale(
+    items: List[str] = typer.Argument(
+        ...,
+        help="One or more *_score.tsv files to z-score scale",
+    ),
+    output_dir: Optional[Path] = typer.Option(
+        None, "--output-dir", "-o",
+        help="Directory for scaled output (default: same directory as input)",
+    ),
+    stats_dir: Optional[Path] = typer.Option(
+        None, "--stats-dir",
+        help="Directory containing {TYPE}_stats.tsv files (default: built-in models dir)",
+    ),
+):
+    """Generate z-score scaled features from scored CADD-SV output files."""
+    sdir = Path(stats_dir) if stats_dir else MODELS_DIR
+
+    for raw in items:
+        scored = Path(raw)
+        if not scored.exists():
+            raise typer.BadParameter(f"File not found: {scored}")
+
+        stem = scored.stem
+        # Replace _score suffix with _scaled, otherwise just append _scaled
+        if stem.endswith("_score"):
+            out_stem = stem[: -len("_score")] + "_scaled"
+        else:
+            out_stem = stem + "_scaled"
+
+        if output_dir:
+            dest = Path(output_dir)
+            dest.mkdir(parents=True, exist_ok=True)
+        else:
+            dest = scored.parent
+
+        out_path = dest / f"{out_stem}.tsv"
+        scale_features(str(scored), str(out_path), sdir)
+        typer.echo(f"Scaled features written to: {out_path}")
 
 
 def main():
