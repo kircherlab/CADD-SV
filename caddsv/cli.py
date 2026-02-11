@@ -72,7 +72,7 @@ def run(
     ),
     sequence_model: bool = typer.Option(False, "--seqresolved", help="Optional to run the model with the integration of SegmentNT derived annotations"),
     sequence_only: bool = typer.Option(
-        False, "--sequence-only",
+        False, "--seqonly",
         help="Sequence-only mode: input TSV with columns REF, ALT, [TYPE], [ID]. "
              "Runs only SegmentNT, generates SB/SBref/DB features without coordinate-based annotations."
     ),
@@ -366,7 +366,6 @@ def run(
             if dst.exists():
                 dst.unlink()
 
-            # Always copy, no symlink (to be changed because redundant)
             shutil.copy2(src, dst)
 
         typer.echo(f"Final scores written to: {outdir.resolve()}")
