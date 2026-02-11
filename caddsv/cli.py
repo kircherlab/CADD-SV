@@ -99,6 +99,7 @@ def run(
     scaled_features: bool = typer.Option(
         False,
         "--scaled-features",
+        hidden=True,
         help="Generate z-score scaled features for interpretation (*_scaled.tsv)",
     ),
     check_time: bool = typer.Option(
@@ -402,7 +403,7 @@ def run(
             typer.echo(f"Scaled features written to: {outdir.resolve()}")
 
 
-@app.command()
+@app.command(hidden=True)
 def scale(
     items: List[str] = typer.Argument(
         ...,
