@@ -31,10 +31,11 @@ Before running scoring, required annotation dependencies must be downloaded and 
 caddsv get annotations
 ```
 
-This command will:
+By default, annotations are extracted to `./annotations`. To specify a custom location:
 
-1. Download a pre-packaged archive of annotation dependencies.
-2. Unpack the archive into the working directory.
+```bash
+caddsv get annotations --annotations-dir /path/to/annotations
+```
 
 This step only needs to be performed once per installation.
 
@@ -50,55 +51,51 @@ To score a BED file containing structural variants:
 caddsv run file.bed
 ```
 
+Multiple BED files can be scored in a single invocation:
+
+```bash
+caddsv run file1.bed file2.bed
+```
+
+Results are written to `caddsv_results/scored/` by default.
+
 ---
 
-### Sequence Model (SegmentNT)
+### Sequence-Resolved Model (SegmentNT)
 
-To run the model with integration of SegmentNT-derived annotations, enable the sequence-based model:
+To run the model with integration of SegmentNT-derived annotations (requires GPU):
 
 ```bash
 caddsv run file.bed --seqresolved
 ```
 
-This flag propagates directly into the Snakemake configuration as `sequence_model=True`.
-
 ---
 
-### Threads
+### Sequence-Only Mode
 
-Control the maximum number of parallel jobs:
+To score variants using only SegmentNT-derived features, without coordinate-based annotations:
 
 ```bash
-caddsv run file.bed --threads 8
+caddsv run sequences.tsv --seqonly
 ```
 
-(Default: 4)
+Input must be a TSV file with columns: `REF`, `ALT`, `[TYPE]`, `[ID]`.
+
+Scores are written to `caddsv_results/scored/<dataset>_seqonly_score.tsv`.
 
 ---
 
-### Configuration File
+### Options
 
-An optional YAML configuration file can be supplied:
-
-```bash
-caddsv run file.bed --config custom_config.yml
-```
-
-If not provided, the default packaged `config.yml` is used.
-
----
-
-### Forcing or Unlocking Runs
-
-- Force rerun of all Snakemake rules:
-  ```bash
-  caddsv run file.bed --force
-  ```
-
-- Unlock a previously locked Snakemake working directory:
-  ```bash
-  caddsv run file.bed --unlock
-  ```
+| Flag | Description |
+|------|-------------|
+| `--threads`, `-j` | Max parallel jobs (default: 4) |
+| `--config`, `-c` | Optional YAML configuration file (default: packaged `config.yml`) |
+| `--output-dir`, `-o` | Results directory (default: `./caddsv_results`) |
+| `--annotations-dir` | Path to annotation directory (default: `./annotations`) |
+| `--force` | Force rerun of all Snakemake rules |
+| `--unlock` | Unlock a previously locked Snakemake working directory |
+| `--check-time` | Track time and resource usage; log to a `.log` file |
 
 ---
 
@@ -109,26 +106,32 @@ If not provided, the default packaged `config.yml` is used.
 When a BED file is supplied, the CLI performs preprocessing before invoking Snakemake:
 
 - Ensures chromosome names are prefixed with `chr`
-- Filters to allowed chromosomes:
-  - `chr1`–`chr22`, `chrX`, `chrY`
-- Filters to allowed SV types (4th column):
-  - `DEL`, `DUP`, `INS`, `INV`
+- Filters to allowed chromosomes: `chr1`--`chr22`, `chrX`, `chrY`
+- Filters to allowed SV types (4th column): `DEL`, `DUP`, `INS`, `INV`
 - Requires at least four columns per row
 - Removes invalid or malformed entries
 - Sorts the BED file by chromosome and start coordinate
 
-Processed BED files are written to:
+Processed files are written to:
 
 ```text
-input/id_<dataset>.bed
+caddsv_results/input/id_<dataset>.bed
 ```
+
+If the target file already exists with different content, CADD-SV will prompt before overwriting.
 
 ---
 
 ## Output
 
-Final scores are written to the `scored/` directory:
+Final scores are written to:
 
 ```text
-scored/<dataset>_score.tsv
+caddsv_results/scored/<dataset>_score.tsv
 ```
+
+Output columns: `chr | start | end | type | CADD-SV_PHRED | CADD-SV_score | feature1 | feature2 | ...`
+
+When using `--seqresolved`, additional columns `CADD-SV-SR_PHRED` and `CADD-SV-SR_score` are included.
+
+When using `--seqonly`, output is written to `<dataset>_seqonly_score.tsv`.
