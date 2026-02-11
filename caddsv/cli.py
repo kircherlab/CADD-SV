@@ -14,6 +14,7 @@ app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring to
 
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
+CONDA_ENV_DIR = PKG_DIR / ".snakemake-envs"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
 
 
@@ -287,6 +288,8 @@ def run(
         str(threads),
         "--rerun-incomplete",
         "--use-conda",
+        "--conda-prefix",
+        str(CONDA_ENV_DIR),
         "--config",
         f"dataset={datasets_value}",
         f"mode={mode}",
