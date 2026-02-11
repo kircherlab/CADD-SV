@@ -81,7 +81,7 @@ include: "rules/seqonly.smk"
 def targets(wildcards):
     if config.get("mode", "training") == "scoring":
         return expand(
-            "output/{sets}{formats}_score{flanks}.bed",
+            "beds/{sets}/output/{sets}{formats}_score{flanks}.bed",
             sets=config["dataset"], formats=config["format"], flanks=config["flank"]
         )
     elif config.get("mode", "training") == "training":
@@ -92,12 +92,12 @@ def targets(wildcards):
     elif config.get("mode", "training") == "seqonly":
         # Sequence-only mode: score using seqonlymodel with SB, SBref, DB features
         return expand(
-            "output/{sets}_seqonly_score.tsv",
+            "beds/{sets}/output/{sets}_seqonly_score.tsv",
             sets=config["dataset"]
         )
     else:
         return expand(
-            "output/{sets}{formats}_score{flanks}.bed",
+            "beds/{sets}/output/{sets}{formats}_score{flanks}.bed",
             sets=config["dataset"], formats=config["format"], flanks=config["flank"]
         )
 

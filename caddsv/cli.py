@@ -88,6 +88,10 @@ def run(
         None, "--annotations-dir",
         help="Path to annotation directory (default: ./annotations)"
     ),
+    output_dir: Optional[Path] = typer.Option(
+        None, "--output-dir", "-o",
+        help="Results directory (default: ./caddsv_results)"
+    ),
     check_time: bool = typer.Option(
         False,
         "--check-time",
@@ -105,13 +109,13 @@ def run(
     if all_scores:
         sequence_model = True
 
-    workdir = Path("beds")
-    workdir.mkdir(exist_ok=True)
+    results_dir = Path(output_dir) if output_dir else Path("caddsv_results")
+    results_dir.mkdir(exist_ok=True)
 
-    outdir = Path("scored")
+    outdir = results_dir / "scored"
     outdir.mkdir(exist_ok=True)
 
-    input_dir = Path("input")
+    input_dir = results_dir / "input"
     input_dir.mkdir(exist_ok=True)
 
     datasets: List[str] = []
@@ -277,6 +281,8 @@ def run(
         str(WORKFLOW_DIR / "Snakefile"),
         "--configfile",
         str(cfg),
+        "--directory",
+        str(results_dir),
         "--cores",
         str(threads),
         "--rerun-incomplete",
@@ -341,7 +347,7 @@ def run(
     if sequence_only:
         # Sequence-only mode: copy scored output to scored/ directory
         for name in datasets:
-            src = Path("output") / f"{name}_seqonly_score.tsv"
+            src = results_dir / "beds" / name / "output" / f"{name}_seqonly_score.tsv"
             if not src.exists():
                 typer.echo(f"Warning: Expected output {src} not found.")
                 raise typer.Exit(code=1)
@@ -357,7 +363,7 @@ def run(
     else:
         # Standard scoring mode
         for name in datasets:
-            src = Path("output") / f"{name}bed_score100.bed"
+            src = results_dir / "beds" / name / "output" / f"{name}bed_score100.bed"
             if not src.exists():
                 raise typer.Exit(code=1)
 

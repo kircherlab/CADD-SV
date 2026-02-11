@@ -598,7 +598,7 @@ if config["sequence_model"]:
                     SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
                     DB="beds/{set}/{set}{format}_DBfeatures.bed",
                 output:
-                    scored="output/{set}{format}_score{flanksize}.bed"
+                    scored="beds/{set}/output/{set}{format}_score{flanksize}.bed"
                 conda:
                     "../envs/training.yml"
                 shell:
@@ -612,7 +612,7 @@ if config["sequence_model"]:
                     input="input/id_{set}.{format}",
                     XB="beds/{set}/{set}{format}_SBfinal{flanksize}.bed",
                 output:
-                    scored="output/{set}{format}_score{flanksize}.bed"
+                    scored="beds/{set}/output/{set}{format}_score{flanksize}.bed"
                 conda:
                     "../envs/training.yml"
                 shell:
@@ -674,7 +674,7 @@ else:
                 input="input/id_{set}.{format}",
                 XB="beds/{set}/{set}{format}_CBfinal{flanksize}.bed",
             output:
-                scored="output/{set}{format}_score{flanksize}.bed"
+                scored="beds/{set}/output/{set}{format}_score{flanksize}.bed"
             conda:
                 "../envs/training.yml"
             shell:

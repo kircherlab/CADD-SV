@@ -119,10 +119,10 @@ rule seqonly_scoring:
     conda:
         "../envs/training.yml"
     output:
-        "output/{set}_seqonly_score.tsv"
+        "beds/{set}/output/{set}_seqonly_score.tsv"
     shell:
         """
-        mkdir -p output
+        mkdir -p beds/{wildcards.set}/output
         python {workflow.basedir}/scripts/scoring_seqonly.py {input.SB} {input.SBref} {input.DB} {output}
         python {workflow.basedir}/scripts/add_phred.py {output}
         """
