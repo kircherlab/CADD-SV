@@ -4,6 +4,7 @@
 import os
 
 gpu_available = bool(os.environ.get("CUDA_VISIBLE_DEVICES"))
+segmentnt_model_dir = config.get("segmentnt_model_dir", "annotations/segment_nt")
 
 
 rule seqonly_preprocess:
@@ -34,10 +35,16 @@ rule seqonly_run_nt_sample:
     resources:
         gpu=1 if gpu_available else 0,
         mem_gb=200
+    params:
+        segmentnt_model=segmentnt_model_dir
     output:
         "beds/{set}/{set}_seqonly_sample.h5"
     shell:
         """
+        if [ -d "{params.segmentnt_model}" ]; then
+            export SEGMENTNT_MODEL="{params.segmentnt_model}"
+            export SEGMENTNT_LOCAL_FILES_ONLY=1
+        fi
         python {workflow.basedir}/scripts/run_segmentNT.py {input} {output}
         """
 
@@ -51,10 +58,16 @@ rule seqonly_run_nt_ref:
     resources:
         gpu=1 if gpu_available else 0,
         mem_gb=200
+    params:
+        segmentnt_model=segmentnt_model_dir
     output:
         "beds/{set}/{set}_seqonly_ref.h5"
     shell:
         """
+        if [ -d "{params.segmentnt_model}" ]; then
+            export SEGMENTNT_MODEL="{params.segmentnt_model}"
+            export SEGMENTNT_LOCAL_FILES_ONLY=1
+        fi
         python {workflow.basedir}/scripts/run_segmentNT.py {input} {output}
         """
 

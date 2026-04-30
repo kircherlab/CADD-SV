@@ -1,5 +1,6 @@
 import os
 gpu_available = bool(os.environ.get("CUDA_VISIBLE_DEVICES"))
+segmentnt_model_dir = config.get("segmentnt_model_dir", os.path.join(ANNOT_DIR, "segment_nt"))
 rule prep_files:
     input:
         bed="input/id_{set}.{format}",
@@ -47,10 +48,16 @@ if config["sequence_model"]:
         resources:
             gpu=1 if gpu_available else 0,
             mem_gb=200
+        params:
+            segmentnt_model=segmentnt_model_dir
         output:
             "beds/{set}/{set}{format}_SBrefprobabilities.h5"
         shell:
             """
+            if [ -d "{params.segmentnt_model}" ]; then
+                export SEGMENTNT_MODEL="{params.segmentnt_model}"
+                export SEGMENTNT_LOCAL_FILES_ONLY=1
+            fi
             python {workflow.basedir}/scripts/run_segmentNT.py {input} {output}
             """
 
@@ -62,10 +69,16 @@ if config["sequence_model"]:
         resources:
             gpu=1 if gpu_available else 0,
             mem_gb=200
+        params:
+            segmentnt_model=segmentnt_model_dir
         output:
             "beds/{set}/{set}{format}_SBprobabilities.h5"
         shell:
             """
+            if [ -d "{params.segmentnt_model}" ]; then
+                export SEGMENTNT_MODEL="{params.segmentnt_model}"
+                export SEGMENTNT_LOCAL_FILES_ONLY=1
+            fi
             python {workflow.basedir}/scripts/run_segmentNT.py {input} {output}
             """
 

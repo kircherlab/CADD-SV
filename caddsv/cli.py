@@ -17,6 +17,60 @@ WORKFLOW_DIR = PKG_DIR / "workflow"
 MODELS_DIR = WORKFLOW_DIR / "models"
 CONDA_ENV_DIR = PKG_DIR / ".snakemake-envs"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+SEGMENTNT_REPO_ID = "InstaDeepAI/segment_nt"
+SEGMENTNT_DIRNAME = "segment_nt"
+SEGMENTNT_ALLOW_PATTERNS = [
+    "README.md",
+    "config.json",
+    "modeling_segment_nt.py",
+    "pytorch_model.bin",
+    "segment_nt_config.py",
+    "special_tokens_map.json",
+    "tokenizer_config.json",
+    "vocab.txt",
+]
+SEGMENTNT_NOTICE = """SegmentNT model files
+Source: https://huggingface.co/InstaDeepAI/segment_nt
+Developed by: InstaDeep
+License: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
+License URL: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+These files are downloaded from Hugging Face for local CADD-SV SegmentNT
+inference. They are not CADD-SV-authored files. Commercial use and
+redistribution are subject to the upstream SegmentNT license.
+"""
+
+
+def write_segmentnt_notice(target: Path) -> None:
+    (target / "SEGMENTNT_NOTICE.txt").write_text(SEGMENTNT_NOTICE)
+
+
+def download_segmentnt(target: Path, repo_id: str, force: bool = False) -> None:
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError as exc:
+        raise typer.BadParameter(
+            "Downloading SegmentNT requires huggingface_hub. "
+            "Install CADD-SV with its current dependencies or run "
+            "'pip install huggingface_hub'."
+        ) from exc
+
+    target.mkdir(parents=True, exist_ok=True)
+    if force:
+        for path in target.iterdir():
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+
+    typer.echo(f"Downloading SegmentNT from {repo_id} to: {target}")
+    snapshot_download(
+        repo_id=repo_id,
+        local_dir=str(target),
+        allow_patterns=SEGMENTNT_ALLOW_PATTERNS,
+    )
+    write_segmentnt_notice(target)
+    typer.echo(f"SegmentNT model files are available at: {target}")
 
 
 def format_seconds(value: float) -> str:
@@ -30,10 +84,26 @@ def get(
             None, "--annotations-dir",
             help="Directory to store annotations (default: ./annotations)"
         ),
+        with_segmentnt: bool = typer.Option(
+            False,
+            "--with-segmentnt",
+            help="Also download SegmentNT model files into <annotations-dir>/segment_nt.",
+        ),
+        force_segmentnt: bool = typer.Option(
+            False,
+            "--force-segmentnt",
+            help="Replace an existing local SegmentNT model directory.",
+        ),
+        segmentnt_repo: str = typer.Option(
+            SEGMENTNT_REPO_ID,
+            "--segmentnt-repo",
+            help="Hugging Face repository to use for SegmentNT model files.",
+        ),
 ):
 
+    target = Path(annotations_dir).resolve() if annotations_dir else Path("annotations").resolve()
+
     if flag == "annotations":
-        target = Path(annotations_dir).resolve() if annotations_dir else Path("annotations").resolve()
         target.mkdir(parents=True, exist_ok=True)
 
         typer.echo("Downloading dependencies...")
@@ -49,7 +119,14 @@ def get(
             check=True)
         os.remove("dependencies.tar.gz")
         typer.echo(f"Annotations extracted to: {target}")
+        if with_segmentnt:
+            download_segmentnt(target / SEGMENTNT_DIRNAME, segmentnt_repo, force_segmentnt)
         typer.echo("DONE")
+    elif flag in {"segmentnt", "segmentNT", "SegmentNT"}:
+        download_segmentnt(target / SEGMENTNT_DIRNAME, segmentnt_repo, force_segmentnt)
+        typer.echo("DONE")
+    else:
+        raise typer.BadParameter("Expected 'annotations' or 'segmentnt'.")
 
 @app.command()
 def run(
@@ -303,6 +380,7 @@ def run(
         f"sequence_model={'True' if sequence_model else 'False'}",
         f"all_scores={'True' if all_scores else 'False'}",
         f"annotations_dir={annot_dir}",
+        f"segmentnt_model_dir={os.environ.get('SEGMENTNT_MODEL', str(Path(annot_dir) / SEGMENTNT_DIRNAME))}",
     ]
     if force:
         cmd.append("--forceall")

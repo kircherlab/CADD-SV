@@ -15,11 +15,15 @@ Progress: prints updates like [current/total] as it processes lines.
 """
 
 import argparse
+import os
+from pathlib import Path
 import sys
 import h5py
 import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModel
+
+DEFAULT_SEGMENTNT_MODEL = "InstaDeepAI/segment_nt"
 
 
 def parse_args():
@@ -31,6 +35,13 @@ def parse_args():
     p.add_argument("--device", type=str, default=None, choices=[None, "cpu", "cuda"],
                    help="Force device; default auto-detect.")
     return p.parse_args()
+
+
+def env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 def ensure_pad_token(tokenizer, model):
@@ -82,9 +93,24 @@ def main():
     args = parse_args()
     seq_col0 = args.seq_col - 1
 
-    # Load tokenizer/model (Colab-style)
-    tokenizer = AutoTokenizer.from_pretrained("InstaDeepAI/segment_nt", trust_remote_code=True)
-    model = AutoModel.from_pretrained("InstaDeepAI/segment_nt", trust_remote_code=True)
+    model_source = os.environ.get("SEGMENTNT_MODEL", DEFAULT_SEGMENTNT_MODEL)
+    local_files_only = (
+        env_flag("SEGMENTNT_LOCAL_FILES_ONLY")
+        or env_flag("HF_HUB_OFFLINE")
+        or env_flag("TRANSFORMERS_OFFLINE")
+        or Path(model_source).exists()
+    )
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_source,
+        trust_remote_code=True,
+        local_files_only=local_files_only,
+    )
+    model = AutoModel.from_pretrained(
+        model_source,
+        trust_remote_code=True,
+        local_files_only=local_files_only,
+    )
 
     # Device
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))

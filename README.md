@@ -39,6 +39,37 @@ caddsv get annotations --annotations-dir /path/to/annotations
 
 This step only needs to be performed once per installation.
 
+### Downloading SegmentNT Locally
+
+SegmentNT model files can be downloaded into the annotation directory so
+sequence-resolved and sequence-only runs do not fetch the model at runtime:
+
+```bash
+caddsv get segmentnt --annotations-dir /path/to/annotations
+```
+
+This creates:
+
+```text
+/path/to/annotations/segment_nt/
+```
+
+You can also download annotations and SegmentNT in one command:
+
+```bash
+caddsv get annotations --annotations-dir /path/to/annotations --with-segmentnt
+```
+
+When `annotations/segment_nt` exists, CADD-SV automatically runs SegmentNT from
+that local folder. To override the model location manually:
+
+```bash
+SEGMENTNT_MODEL=/path/to/segment_nt caddsv run file.bed --seqresolved
+```
+
+The SegmentNT files are downloaded from `InstaDeepAI/segment_nt` on Hugging Face
+and are licensed separately from CADD-SV under CC BY-NC-SA 4.0.
+
 ---
 
 ## Running CADD-SV

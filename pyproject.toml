@@ -9,6 +9,7 @@ description = "CADD-SV Structural Variant scoring Workflow"
 requires-python = ">=3.9"
 dependencies = [
   "typer>=0.9",
+  "huggingface_hub>=0.24",
   "snakemake>=7.31.0",
   "pulp==2.7"
 ]
