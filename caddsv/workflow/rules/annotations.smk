@@ -348,13 +348,14 @@ rule zoonomia:
     input:
         bed="beds/{set}/{set}{format}_wchr.{bedflanks}",
         anno=ANNOT_DIR + "/zoonomia/cleaned_summarized_zoonomia.bed.gz",
+        index=ANNOT_DIR + "/zoonomia/cleaned_summarized_zoonomia.bed.gz.tbi",
     conda:
-        "../envs/SV.yml"
+        "../envs/preprocessing.yml"
     output:
         temp("beds/{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}"),
     shell:
         """
-        bedtools map -a {input.bed} -b {input.anno} -c 4,4,4 -o max,min,mean > {output}
+        python {workflow.basedir}/scripts/zoonomia_tabix_map.py {input.bed} {input.anno} > {output}
         """
 
 rule boundary_score:
