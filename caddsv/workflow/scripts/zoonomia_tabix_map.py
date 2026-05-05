@@ -4,6 +4,9 @@ import pandas as pd
 import pysam
 
 
+ZOONOMIA_BIN_SIZE = 10
+
+
 def bedtools_float(value):
     return f"{value:.10g}"
 
@@ -29,7 +32,9 @@ for _, row in input_bed.iterrows():
     chrom, start, end = str(row[0]), int(row[1]), int(row[2])
     values = []
     if chrom in contigs:
-        for line in input_anno.fetch(chrom, max(0, start - 1), end if end > start else start + 1):
+        fetch_start = max(0, start - ZOONOMIA_BIN_SIZE)
+        fetch_end = end if end > start else start + 1
+        for line in input_anno.fetch(chrom, fetch_start, fetch_end):
             fields = line.strip().split("\t")
             anno_start, anno_end = int(fields[1]), int(fields[2])
             if overlaps(start, end, anno_start, anno_end):
