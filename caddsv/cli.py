@@ -135,7 +135,7 @@ def run(
         help=(
             "One or more inputs, each either:\n"
             "  - a BED file (e.g. variants.bed), or\n"
-            "  - a TSV file with --sequence-only (REF, ALT, [TYPE], [ID]), or\n"
+            "  - a TSV file with --seqonly (REF, ALT, [TYPE], [ID]), or\n"
             "  - a dataset name (e.g. longrange_cherie)\n\n"
             "BED files are automatically mapped to input/id_<name>.bed.\n"
             "For names, CADD-SV expects input/id_<name>.bed to exist."
