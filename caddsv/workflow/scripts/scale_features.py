@@ -11,7 +11,8 @@ import numpy as np
 from pathlib import Path
 
 # Columns that are never features
-_META_COLS = {"chr", "start", "end", "type"}
+_META_COLS = {"id", "chr", "start", "end", "type"}
+_META_COL_ORDER = ["id", "chr", "start", "end", "type"]
 
 
 def _is_score_col(col: str) -> bool:
@@ -43,8 +44,12 @@ def scale_features(scored_path: str, output_path: str, stats_dir: Path) -> None:
     # Cache stats tables per SV type
     stats_cache: dict[str, pd.DataFrame] = {}
 
-    # Prepare output: meta columns + feature columns (z-scored)
-    meta = df[["chr", "start", "end", "type"]].copy()
+    if "type" not in df.columns:
+        raise ValueError("Cannot scale features without a 'type' column.")
+
+    # Prepare output: available meta columns + feature columns (z-scored)
+    meta_cols = [col for col in _META_COL_ORDER if col in df.columns]
+    meta = df[meta_cols].copy()
     z_df = pd.DataFrame(index=df.index)
 
     for sv_type in df["type"].unique():

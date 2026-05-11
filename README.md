@@ -350,7 +350,7 @@ Column behavior:
 | `REF` | Yes | None |
 | `ALT` | Yes | None |
 | `TYPE` | No | `SV` |
-| `ID` | No | `var_<line_number>` |
+| `ID` | No | Blank; omitted from final output when absent from all rows |
 
 Sequence-only preprocessing:
 
@@ -394,6 +394,10 @@ caddsv_results/
 
 The `scored/` directory is the stable user-facing output location. The `beds/`
 directory contains Snakemake intermediates and the workflow's native output.
+Sequence-only intermediates are BED-shaped for compatibility with SegmentNT and
+feature generation, but the final sequence-only score TSV does not report
+synthetic `chr`, `start`, or `end` columns. It includes an `id` column only when
+the input TSV supplied IDs.
 
 Main score columns:
 

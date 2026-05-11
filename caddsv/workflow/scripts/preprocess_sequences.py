@@ -126,9 +126,10 @@ def main():
             ref_seq = parts[0].upper().strip()
             alt_seq = parts[1].upper().strip()
 
-            # Optional columns with defaults
+            # Optional columns
             sv_type = parts[2] if len(parts) > 2 and parts[2].strip() else "SV"
-            id_ = parts[3] if len(parts) > 3 and parts[3].strip() else f"var_{line_idx}"
+            id_ = parts[3] if len(parts) > 3 and parts[3].strip() else ""
+            display_id = id_ if id_ else f"line {line_idx}"
 
             # Validate flanking regions match (first and last 96bp)
             flank_size = 96
@@ -139,7 +140,7 @@ def main():
 
             if ref_upstream != alt_upstream:
                 sys.stderr.write(
-                    f"[preprocess_sequences] Error line {line_idx} (ID: {id_}): "
+                    f"[preprocess_sequences] Error line {line_idx} (ID: {display_id}): "
                     f"first {flank_size}bp of REF and ALT do not match.\n"
                     f"  REF: {ref_upstream[:50]}{'...' if len(ref_upstream) > 50 else ''}\n"
                     f"  ALT: {alt_upstream[:50]}{'...' if len(alt_upstream) > 50 else ''}\n"
@@ -148,7 +149,7 @@ def main():
 
             if ref_downstream != alt_downstream:
                 sys.stderr.write(
-                    f"[preprocess_sequences] Error line {line_idx} (ID: {id_}): "
+                    f"[preprocess_sequences] Error line {line_idx} (ID: {display_id}): "
                     f"last {flank_size}bp of REF and ALT do not match.\n"
                     f"  REF: {ref_downstream[:50]}{'...' if len(ref_downstream) > 50 else ''}\n"
                     f"  ALT: {alt_downstream[:50]}{'...' if len(alt_downstream) > 50 else ''}\n"
