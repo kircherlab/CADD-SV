@@ -60,16 +60,33 @@ CADD-SV itself is installed with `pip install .` from a source checkout. Use the
 quick-start commands above for a fresh install.
 
 The command-line wrapper needs Python and the Python dependencies from
-`pyproject.toml`. At runtime, Snakemake also needs conda available so it can
-create the workflow environments defined under `caddsv/workflow/envs/`.
+`pyproject.toml`. The pip package installs the CLI and bundled workflow files;
+full scoring also requires conda at runtime so Snakemake can create the
+workflow environments defined under `caddsv/workflow/envs/`.
 
 The first scoring run may spend time creating those environments under:
 
 ```text
-caddsv/.snakemake-envs/
+${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-conda/
 ```
 
 Later runs reuse the same environments.
+
+To choose a cluster scratch or shared environment location, use either:
+
+```bash
+caddsv run sample.bed --conda-prefix /scratch/$USER/caddsv-conda
+```
+
+or:
+
+```bash
+export CADD_SV_CONDA_PREFIX=/scratch/$USER/caddsv-conda
+caddsv run sample.bed
+```
+
+Old local `caddsv/.snakemake-envs/` directories from source checkouts are
+legacy runtime files and can be removed manually when no run is using them.
 
 ## Recommended Layout
 
@@ -416,6 +433,7 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 | `--threads`, `-j` | Maximum Snakemake jobs. Default: `4`. |
 | `--annotations-dir PATH` | Annotation directory. Default: `./annotations`. |
 | `--output-dir`, `-o PATH` | Results directory. Default: `./caddsv_results`. |
+| `--conda-prefix PATH` | Snakemake conda environment directory. Default: `CADD_SV_CONDA_PREFIX` or `${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-conda`. |
 | `--config`, `-c PATH` | Optional YAML configuration file. Default: packaged `caddsv/config.yml`. |
 | `--seqresolved` | Add SegmentNT-derived features to coordinate-based scoring. |
 | `--seqonly` | Run sequence-only scoring from REF/ALT TSV input. |
@@ -426,11 +444,19 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 ## Runtime Notes
 
 - First runs are slower because Snakemake creates conda environments.
+- Snakemake conda environments are stored in the user cache by default; set
+  `CADD_SV_CONDA_PREFIX` or `--conda-prefix` to use scratch/shared storage.
 - `--threads` controls Snakemake cores, but some steps are I/O-bound.
 - SegmentNT is much faster on GPU than CPU.
 - Keep annotations and outputs on fast local storage when possible.
 - Use the same `--output-dir` to resume or reuse work from an interrupted run.
 - Use a new `--output-dir` when comparing inputs with the same filename stem.
+
+To remove cached Snakemake conda environments:
+
+```bash
+rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-conda"
+```
 
 Use `--check-time` to record a small resource summary:
 

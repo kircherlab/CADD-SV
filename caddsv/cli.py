@@ -15,8 +15,9 @@ app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring to
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
 MODELS_DIR = WORKFLOW_DIR / "models"
-CONDA_ENV_DIR = PKG_DIR / ".snakemake-envs"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+CONDA_PREFIX_ENV_VAR = "CADD_SV_CONDA_PREFIX"
+CONDA_CACHE_SUBDIR = Path("caddsv") / "snakemake-conda"
 SEGMENTNT_REPO_ID = "InstaDeepAI/segment_nt"
 SEGMENTNT_DIRNAME = "segment_nt"
 SEGMENTNT_ALLOW_PATTERNS = [
@@ -75,6 +76,72 @@ def download_segmentnt(target: Path, repo_id: str, force: bool = False) -> None:
 
 def format_seconds(value: float) -> str:
     return f"{value:.2f}s"
+
+
+def _default_conda_prefix() -> Path:
+    cache_home = os.environ.get("XDG_CACHE_HOME")
+    cache_base = (
+        Path(cache_home).expanduser()
+        if cache_home
+        else Path.home() / ".cache"
+    )
+    return cache_base / CONDA_CACHE_SUBDIR
+
+
+def resolve_conda_prefix(conda_prefix: Optional[Path]) -> Path:
+    if conda_prefix is not None:
+        return Path(conda_prefix).expanduser().resolve()
+
+    env_value = os.environ.get(CONDA_PREFIX_ENV_VAR)
+    if env_value:
+        return Path(env_value).expanduser().resolve()
+
+    return _default_conda_prefix().expanduser().resolve()
+
+
+def _build_snakemake_command(
+    cfg: Path,
+    results_dir: Path,
+    threads: int,
+    conda_prefix: Path,
+    datasets_value: str,
+    mode: str,
+    sequence_model: bool,
+    all_scores: bool,
+    annot_dir: str,
+    segmentnt_model_dir: str,
+    force: bool,
+    unlock: bool,
+) -> List[str]:
+    cmd = [
+        sys.executable,
+        "-m",
+        "snakemake",
+        "--snakefile",
+        str(WORKFLOW_DIR / "Snakefile"),
+        "--configfile",
+        str(cfg),
+        "--directory",
+        str(results_dir),
+        "--cores",
+        str(threads),
+        "--rerun-incomplete",
+        "--use-conda",
+        "--conda-prefix",
+        str(conda_prefix),
+        "--config",
+        f"dataset={datasets_value}",
+        f"mode={mode}",
+        f"sequence_model={'True' if sequence_model else 'False'}",
+        f"all_scores={'True' if all_scores else 'False'}",
+        f"annotations_dir={annot_dir}",
+        f"segmentnt_model_dir={segmentnt_model_dir}",
+    ]
+    if force:
+        cmd.append("--forceall")
+    if unlock:
+        cmd.append("--unlock")
+    return cmd
 
 
 @app.command()
@@ -170,6 +237,14 @@ def run(
     output_dir: Optional[Path] = typer.Option(
         None, "--output-dir", "-o",
         help="Results directory (default: ./caddsv_results)"
+    ),
+    conda_prefix: Optional[Path] = typer.Option(
+        None,
+        "--conda-prefix",
+        help=(
+            "Directory for Snakemake conda environments "
+            "(default: CADD_SV_CONDA_PREFIX or user cache)."
+        ),
     ),
     scaled_features: bool = typer.Option(
         False,
@@ -357,35 +432,26 @@ def run(
             datasets.append(name)
 
     datasets_value = ",".join(datasets)
-
-    cmd = [
-        sys.executable,
-        "-m",
-        "snakemake",
-        "--snakefile",
-        str(WORKFLOW_DIR / "Snakefile"),
-        "--configfile",
-        str(cfg),
-        "--directory",
-        str(results_dir),
-        "--cores",
-        str(threads),
-        "--rerun-incomplete",
-        "--use-conda",
-        "--conda-prefix",
-        str(CONDA_ENV_DIR),
-        "--config",
-        f"dataset={datasets_value}",
-        f"mode={mode}",
-        f"sequence_model={'True' if sequence_model else 'False'}",
-        f"all_scores={'True' if all_scores else 'False'}",
-        f"annotations_dir={annot_dir}",
-        f"segmentnt_model_dir={os.environ.get('SEGMENTNT_MODEL', str(Path(annot_dir) / SEGMENTNT_DIRNAME))}",
-    ]
-    if force:
-        cmd.append("--forceall")
-    if unlock:
-        cmd.append("--unlock")
+    resolved_conda_prefix = resolve_conda_prefix(conda_prefix)
+    resolved_conda_prefix.mkdir(parents=True, exist_ok=True)
+    segmentnt_model_dir = os.environ.get(
+        "SEGMENTNT_MODEL",
+        str(Path(annot_dir) / SEGMENTNT_DIRNAME),
+    )
+    cmd = _build_snakemake_command(
+        cfg=Path(cfg),
+        results_dir=results_dir,
+        threads=threads,
+        conda_prefix=resolved_conda_prefix,
+        datasets_value=datasets_value,
+        mode=mode,
+        sequence_model=sequence_model,
+        all_scores=all_scores,
+        annot_dir=annot_dir,
+        segmentnt_model_dir=segmentnt_model_dir,
+        force=force,
+        unlock=unlock,
+    )
 
     typer.echo("Running:\n  " + " ".join(cmd))
 
