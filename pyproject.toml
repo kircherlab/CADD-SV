@@ -6,11 +6,24 @@ build-backend = "setuptools.build_meta"
 name = "caddsv"
 version = "2.0"
 description = "CADD-SV Structural Variant scoring Workflow"
+authors = [
+  {name = "Orazio Catona", email = "orazio.catona@uni-luebeck.de"},
+  {name = "Martin Kircher", email = "martin.kircher@uni-luebeck.de"},
+]
+readme = "README.md"
 requires-python = ">=3.9"
+license = "MIT"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Unix",
+  "Topic :: Bioinformatics :: Genomics",
+]
+keywords = ["SV", "Variant Effects", "Scoring", "Annotation", "Prioritization"]
 dependencies = [
   "typer>=0.9",
   "huggingface_hub>=0.24",
-  "snakemake>=7.31.0",
+  "snakemake>=7.31.0,<9",
   "pulp==2.7"
 ]
 
@@ -19,6 +32,11 @@ caddsv = "caddsv.cli:app"
 
 [tool.setuptools]
 package-dir = {"" = "."}
+
+[project.urls]
+Homepage = "https://cadd-sv.bihealth.org"
+Repository = "https://github.com/kircherlab/CADD-SV"
+Issues = "https://github.com/kircherlab/CADD-SV/issues"
 
 [tool.setuptools.packages.find]
 include = ["caddsv*"]  

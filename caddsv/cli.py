@@ -1,14 +1,17 @@
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import subprocess
 import sys
 from typing import List, Optional
 import tempfile
+import tarfile
 import typer
 import os
 import shutil
 import time
 from datetime import datetime
 import resource
+import urllib.error
+import urllib.request
 
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
 
@@ -20,6 +23,8 @@ CONDA_PREFIX_ENV_VAR = "CADD_SV_CONDA_PREFIX"
 CONDA_CACHE_SUBDIR = Path("caddsv") / "snakemake-conda"
 SEGMENTNT_REPO_ID = "InstaDeepAI/segment_nt"
 SEGMENTNT_DIRNAME = "segment_nt"
+ANNOTATIONS_ARCHIVE_URL = "https://kircherlab.bihealth.org/download/CADD-SV/v2.0/dependencies.tar.gz"
+DOWNLOAD_CHUNK_SIZE = 8 * 1024 * 1024
 SEGMENTNT_ALLOW_PATTERNS = [
     "README.md",
     "config.json",
@@ -40,6 +45,96 @@ These files are downloaded from Hugging Face for local CADD-SV SegmentNT
 inference. They are not CADD-SV-authored files. Commercial use and
 redistribution are subject to the upstream SegmentNT license.
 """
+
+
+def _download_file(url: str, destination: Path) -> None:
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            with destination.open("wb") as output:
+                shutil.copyfileobj(response, output, length=DOWNLOAD_CHUNK_SIZE)
+    except urllib.error.URLError as exc:
+        raise typer.BadParameter(f"Failed to download {url}: {exc}") from exc
+
+
+def _strip_archive_root(member_name: str) -> Optional[PurePosixPath]:
+    member_path = PurePosixPath(member_name)
+    if member_path.is_absolute():
+        raise typer.BadParameter(
+            f"Refusing to extract absolute archive path: {member_name}"
+        )
+
+    parts = [part for part in member_path.parts if part not in ("", ".")]
+    if any(part == ".." for part in parts):
+        raise typer.BadParameter(
+            f"Refusing to extract unsafe archive path: {member_name}"
+        )
+
+    stripped_parts = parts[1:]
+    if not stripped_parts:
+        return None
+    return PurePosixPath(*stripped_parts)
+
+
+def _ensure_within_directory(base: Path, destination: Path) -> None:
+    base = base.resolve()
+    destination = destination.resolve()
+    try:
+        destination.relative_to(base)
+    except ValueError as exc:
+        raise typer.BadParameter(
+            f"Refusing to extract outside annotation directory: {destination}"
+        ) from exc
+
+
+def _extract_annotations_archive(archive_path: Path, target: Path) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive_path, "r:*") as archive:
+        for member in archive:
+            relative_path = _strip_archive_root(member.name)
+            if relative_path is None:
+                continue
+
+            destination = target / Path(*relative_path.parts)
+            _ensure_within_directory(target, destination)
+
+            if member.isdir():
+                destination.mkdir(parents=True, exist_ok=True)
+            elif member.isfile():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                source = archive.extractfile(member)
+                if source is None:
+                    raise typer.BadParameter(
+                        f"Could not read archive entry: {member.name}"
+                    )
+                with source, destination.open("wb") as output:
+                    shutil.copyfileobj(source, output, length=DOWNLOAD_CHUNK_SIZE)
+                os.chmod(destination, member.mode & 0o777)
+            else:
+                raise typer.BadParameter(
+                    f"Refusing to extract unsupported archive entry: {member.name}"
+                )
+
+
+def download_annotations(target: Path, url: str = ANNOTATIONS_ARCHIVE_URL) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    archive_path: Optional[Path] = None
+
+    with tempfile.NamedTemporaryFile(
+        prefix="caddsv-dependencies-",
+        suffix=".tar.gz",
+        dir=target,
+        delete=False,
+    ) as archive_file:
+        archive_path = Path(archive_file.name)
+
+    try:
+        typer.echo(f"Downloading dependencies from: {url}")
+        _download_file(url, archive_path)
+        typer.echo("Uncompressing dependencies...")
+        _extract_annotations_archive(archive_path, target)
+    finally:
+        if archive_path is not None:
+            archive_path.unlink(missing_ok=True)
 
 
 def write_segmentnt_notice(target: Path) -> None:
@@ -97,6 +192,21 @@ def resolve_conda_prefix(conda_prefix: Optional[Path]) -> Path:
         return Path(env_value).expanduser().resolve()
 
     return _default_conda_prefix().expanduser().resolve()
+
+
+def resolve_scaler_dir(scaler_dir: Optional[Path]) -> Path:
+    if scaler_dir is None:
+        raise typer.BadParameter(
+            "caddsv scale requires --scaler-dir pointing to a directory "
+            "containing {TYPE}_stats.tsv files."
+        )
+
+    resolved = Path(scaler_dir).expanduser().resolve()
+    if not resolved.exists():
+        raise typer.BadParameter(f"Scaler directory does not exist: {resolved}")
+    if not resolved.is_dir():
+        raise typer.BadParameter(f"Scaler path is not a directory: {resolved}")
+    return resolved
 
 
 def _build_snakemake_command(
@@ -171,20 +281,7 @@ def get(
     target = Path(annotations_dir).resolve() if annotations_dir else Path("annotations").resolve()
 
     if flag == "annotations":
-        target.mkdir(parents=True, exist_ok=True)
-
-        typer.echo("Downloading dependencies...")
-        subprocess.run(["wget",
-            "https://kircherlab.bihealth.org/download/CADD-SV/v2.0/dependencies.tar.gz"],
-            check=True)
-        typer.echo("Uncompressing dependencies...")
-        subprocess.run(["tar",
-            "-xf",
-            "dependencies.tar.gz",
-            "--strip-components=1",
-            "-C", str(target)],
-            check=True)
-        os.remove("dependencies.tar.gz")
+        download_annotations(target)
         typer.echo(f"Annotations extracted to: {target}")
         if with_segmentnt:
             download_segmentnt(target / SEGMENTNT_DIRNAME, segmentnt_repo, force_segmentnt)
@@ -557,14 +654,17 @@ def scale(
         None, "--output-dir", "-o",
         help="Directory for scaled output (default: same directory as input)",
     ),
-    stats_dir: Optional[Path] = typer.Option(
-        None, "--stats-dir",
-        help="Directory containing {TYPE}_stats.tsv files (default: built-in models dir)",
+    scaler_dir: Optional[Path] = typer.Option(
+        None, "--scaler-dir", "--stats-dir",
+        help=(
+            "Directory containing {TYPE}_stats.tsv scaler files. "
+            "--stats-dir is accepted as a compatibility alias."
+        ),
     ),
 ):
     """Generate z-score scaled features from scored CADD-SV output files."""
+    sdir = resolve_scaler_dir(scaler_dir)
     from caddsv.workflow.scripts.scale_features import scale_features
-    sdir = Path(stats_dir) if stats_dir else MODELS_DIR
 
     for raw in items:
         scored = Path(raw)
