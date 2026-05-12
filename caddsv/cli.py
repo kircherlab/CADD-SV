@@ -343,12 +343,6 @@ def run(
             "(default: CADD_SV_CONDA_PREFIX or user cache)."
         ),
     ),
-    scaled_features: bool = typer.Option(
-        False,
-        "--scaled-features",
-        hidden=True,
-        help="Generate z-score scaled features for interpretation (*_scaled.tsv)",
-    ),
     check_time: bool = typer.Option(
         False,
         "--check-time",
@@ -611,14 +605,6 @@ def run(
             shutil.copy2(src, dst)
 
         typer.echo(f"Sequence-only scores written to: {outdir.resolve()}")
-
-        if scaled_features:
-            from caddsv.workflow.scripts.scale_features import scale_features
-            for name in datasets:
-                scored = outdir / f"{name}_seqonly_score.tsv"
-                scaled = outdir / f"{name}_seqonly_scaled.tsv"
-                scale_features(str(scored), str(scaled), MODELS_DIR)
-            typer.echo(f"Scaled features written to: {outdir.resolve()}")
     else:
         # Standard scoring mode
         for name in datasets:
@@ -634,14 +620,6 @@ def run(
             shutil.copy2(src, dst)
 
         typer.echo(f"Final scores written to: {outdir.resolve()}")
-
-        if scaled_features:
-            from caddsv.workflow.scripts.scale_features import scale_features
-            for name in datasets:
-                scored = outdir / f"{name}_score.tsv"
-                scaled = outdir / f"{name}_scaled.tsv"
-                scale_features(str(scored), str(scaled), MODELS_DIR)
-            typer.echo(f"Scaled features written to: {outdir.resolve()}")
 
 
 @app.command(hidden=True)

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,7 +17,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: POSIX :: Linux",
   "Operating System :: Unix",
-  "Topic :: Bioinformatics :: Genomics",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 keywords = ["SV", "Variant Effects", "Scoring", "Annotation", "Prioritization"]
 dependencies = [
