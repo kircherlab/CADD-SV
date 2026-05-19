@@ -1,4 +1,4 @@
-# CADD-SV
+# CADD-SV v2.0
 
 CADD-SV is a command-line tool for scoring structural variants (SVs). The
 `caddsv` command wraps the packaged Snakemake workflow, prepares input files,
