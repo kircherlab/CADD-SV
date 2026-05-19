@@ -4,19 +4,6 @@
 # Large annotation resources (not shipped with code)
 annotations/
 
-# Workflow intermediates and outputs
-beds/
-scored/
-results/
-longrange_cherie/
-output/
-
-# User input data
-input/
-
-# Local config overrides (if you keep top-level config for user use)
-config/
-
 # Python build / packaging artifacts
 build/
 dist/
@@ -30,8 +17,3 @@ conda/
 # Logs and scratch
 logs/
 *.log
-
-# Editors and OS noise
-.DS_Store
-*.swp
-*.swo
