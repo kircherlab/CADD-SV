@@ -13,7 +13,6 @@ conda create -n caddsv python=3.12 pip
 conda activate caddsv
 git clone https://github.com/kircherlab/CADD-SV.git
 cd CADD-SV
-git checkout dev
 pip install .
 ```
 
