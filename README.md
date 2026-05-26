@@ -16,6 +16,12 @@ cd CADD-SV
 pip install .
 ```
 
+Alternatively, install CADD-SV from Bioconda:
+
+```bash
+conda install -c bioconda caddsv
+```
+
 Download the annotation bundle:
 
 ```bash
@@ -53,9 +59,9 @@ caddsv get annotations \
 
 ## Installation Notes
 
-CADD-SV installs with `pip install .` from this repository. The package includes
-the CLI and workflow files, but full scoring also needs conda at runtime because
-Snakemake creates the workflow environments on first use.
+CADD-SV installs with `pip install .` from this repository or from Bioconda. The
+package includes the CLI and workflow files, but full scoring also needs conda
+at runtime because Snakemake creates the workflow environments on first use.
 
 By default, those environments are cached under:
 
