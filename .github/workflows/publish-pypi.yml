@@ -6,6 +6,11 @@ on: # yamllint disable-line rule:truthy
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish, for example v2.0"
+        required: true
+        type: string
 
 jobs:
   build-and-publish:
@@ -21,6 +26,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check out requested tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: git checkout --detach "${RELEASE_TAG}"
 
       - uses: actions/setup-python@v6
         with:
