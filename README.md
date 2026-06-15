@@ -1,4 +1,8 @@
 # CADD-SV v2.0
+[![Release](https://img.shields.io/badge/release-v2.0-blue)](https://github.com/kircherlab/CADD-SV/releases/tag/v2.0)
+[![PyPI version](https://img.shields.io/pypi/v/caddsv.svg)](https://pypi.org/project/caddsv/)
+[![Bioconda version](https://img.shields.io/conda/vn/bioconda/caddsv.svg?style=flat)](https://bioconda.github.io/recipes/caddsv/README.html)
+[![License](https://img.shields.io/github/license/kircherlab/CADD-SV.svg)](https://github.com/kircherlab/CADD-SV/blob/main/LICENSE)
 
 CADD-SV is a command-line tool for scoring structural variants (SVs). The
 `caddsv` command wraps the packaged Snakemake workflow, prepares input files,
@@ -21,7 +25,11 @@ Alternatively, install CADD-SV from Bioconda:
 ```bash
 conda install -c bioconda caddsv
 ```
+Installation through PyPI is also available, conda will still be needed to run it
 
+```bash
+pip install caddsv
+```
 Download the annotation bundle:
 
 ```bash
