@@ -1,4 +1,4 @@
-# CADD-SV v2.0
+# CADD-SV
 [![Release](https://img.shields.io/badge/release-v2.0-green)](https://github.com/kircherlab/CADD-SV/releases/tag/v2.0)
 [![PyPI version](https://img.shields.io/pypi/v/caddsv.svg)](https://pypi.org/project/caddsv/)
 [![Bioconda version](https://img.shields.io/conda/vn/bioconda/caddsv.svg?style=flat)](https://bioconda.github.io/recipes/caddsv/README.html)
