@@ -1,9 +1,9 @@
 # CADD-SV rule containers
 
 The same Dockerfile builds the four dependency images used by the Snakemake
-workflow. It uses the conda-forge Miniforge image and `conda env update` to
-install each environment. Use the `caddsv` package directory as the Docker
-build context:
+workflow. It uses the conda-forge Miniforge image and `conda env create` with
+Conda's libmamba solver to install each environment in an isolated image
+environment. Use the `caddsv` package directory as the Docker build context:
 
 ```bash
 docker build \
