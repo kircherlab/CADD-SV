@@ -2,9 +2,30 @@
 # Annotation script for feature retrieval
 # CADD-SV
 
-# this container defines the underlying OS for each job when using the workflow
-# # with --use-conda --use-singularity
-container: "docker://continuumio/miniconda3"
+# Versioned OCI images used when Snakemake runs with --use-singularity.
+# A user config can override any entry under the `containers` key.
+DEFAULT_CONTAINER_IMAGES = {
+    "preprocessing": "docker://ghcr.io/kircherlab/cadd-sv-preprocessing:2.0",
+    "sv": "docker://ghcr.io/kircherlab/cadd-sv-sv:2.0",
+    "nt": "docker://ghcr.io/kircherlab/cadd-sv-nt:2.0",
+    "training": "docker://ghcr.io/kircherlab/cadd-sv-training:2.0",
+}
+CONTAINER_IMAGES = dict(DEFAULT_CONTAINER_IMAGES)
+configured_containers = config.get("containers", {}) or {}
+if not isinstance(configured_containers, dict):
+    raise ValueError("The 'containers' config value must be a mapping.")
+CONTAINER_IMAGES.update(configured_containers)
+
+
+def container_for(environment):
+    image = CONTAINER_IMAGES.get(environment)
+    if not isinstance(image, str) or not image.strip():
+        raise ValueError(
+            f"Missing container image for workflow environment '{environment}'."
+        )
+    return image
+
+
 def as_list(x):
     if isinstance(x, (list, tuple)):
         return list(x)

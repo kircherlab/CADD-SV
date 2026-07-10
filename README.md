@@ -68,8 +68,9 @@ caddsv get annotations \
 ## Installation Notes
 
 CADD-SV installs with `pip install .` from this repository or from Bioconda. The
-package includes the CLI and workflow files, but full scoring also needs conda
-at runtime because Snakemake creates the workflow environments on first use.
+package includes the CLI and workflow files. By default, full scoring also uses
+conda at runtime so Snakemake can create isolated environments for the workflow
+rules.
 
 By default, those environments are cached under:
 
@@ -82,6 +83,40 @@ shared storage:
 
 ```bash
 caddsv run sample.bed --conda-prefix /scratch/$USER/caddsv-conda
+```
+
+For a container or another pre-provisioned environment, disable Snakemake's
+per-rule conda environments:
+
+```bash
+caddsv run sample.bed --no-use-conda
+```
+
+In this mode, CADD-SV does not create a conda cache and does not pass
+`--use-conda` or `--conda-prefix` to Snakemake. Every executable and Python
+package required by the selected workflow rules must already be available in
+the parent environment. The files under `caddsv/workflow/envs/` describe those
+rule dependencies.
+
+For Singularity/Apptainer deployments, use the versioned OCI image assigned to
+each workflow environment:
+
+```bash
+caddsv run sample.bed \
+  --use-singularity \
+  --singularity-prefix /scratch/$USER/caddsv-singularity
+```
+
+Images are cached in `${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-singularity`
+by default. Override the image URIs, including with local SIF paths on an
+air-gapped cluster, through the `containers` mapping in a config file. The
+package includes the Dockerfile and environment definitions used to build the
+images; image binaries are published separately.
+
+For GPU-enabled SegmentNT execution, pass the runtime flag explicitly:
+
+```bash
+caddsv run sample.bed --use-singularity --singularity-args=--nv
 ```
 
 ## Data
@@ -329,7 +364,11 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 | `--threads`, `-j` | Maximum Snakemake jobs. Default: `4`. |
 | `--annotations-dir PATH` | Annotation directory. Default: `./annotations`. |
 | `--output-dir`, `-o PATH` | Results directory. Default: `./caddsv_results`. |
+| `--use-conda` / `--no-use-conda` | Enable or disable Snakemake conda environments. Enabled by default. |
 | `--conda-prefix PATH` | Snakemake conda environment directory. |
+| `--use-singularity` / `--use-apptainer` | Run rules in their versioned OCI/SIF containers. |
+| `--singularity-prefix PATH` | Singularity/Apptainer image cache directory. |
+| `--singularity-args TEXT` | Extra runtime arguments, such as `--nv` for GPUs. |
 | `--config`, `-c PATH` | Alternate Snakemake YAML configuration. |
 | `--seqresolved` | Add SegmentNT-derived features to coordinate-based scoring. |
 | `--seqonly` | Run sequence-only scoring from REF/ALT TSV input. |
@@ -339,7 +378,8 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 
 ## Runtime Notes
 
-- First runs are slower because Snakemake creates conda environments.
+- First runs are slower because Snakemake creates or pulls software environments.
+- In containerized runs, use `--no-use-conda` for a prebuilt parent environment or `--use-singularity` for per-rule images.
 - Use the same `--output-dir` to resume or reuse work from an interrupted run.
 - Use a new `--output-dir` when comparing inputs with the same filename stem.
 - `--threads` controls Snakemake cores, but some steps are I/O-bound.

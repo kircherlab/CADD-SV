@@ -8,4 +8,12 @@ flank:
 mode: scoring
 sequence_model: false
 all_scores: false
+
+# Rule container images used with `caddsv run --use-singularity`.
+# Override these with immutable local SIF paths on air-gapped clusters.
+containers:
+        preprocessing: docker://ghcr.io/kircherlab/cadd-sv-preprocessing:2.0
+        sv: docker://ghcr.io/kircherlab/cadd-sv-sv:2.0
+        nt: docker://ghcr.io/kircherlab/cadd-sv-nt:2.0
+        training: docker://ghcr.io/kircherlab/cadd-sv-training:2.0
 ...

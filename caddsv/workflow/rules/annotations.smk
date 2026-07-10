@@ -5,6 +5,8 @@ rule CTCF:
         anno=ANNOT_DIR + "/CTCF/Wangetal_hg38.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_ctcf.{bedflanks}"),
     shell:
@@ -18,6 +20,8 @@ rule ultraconserved:
         anno=ANNOT_DIR + "/ultraconserved/ultraconserved_hg38_muliz120M_sort.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_ultraconserved.{bedflanks}"),
     shell:
@@ -32,6 +36,8 @@ rule GC:
         anno=ANNOT_DIR + "/GC/gc5Base.bedGraph.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         t1=temp("beds/{set}/{set}{format}_gc.{bedflanks}"),
     shell:
@@ -47,6 +53,8 @@ rule gene_model_tmp:
         anno=ANNOT_DIR + "/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.gtf.gz",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_gm_tmp.{bedflanks}"),
     shell:
@@ -61,6 +69,8 @@ rule gene_model:
         anno="beds/{set}/{set}{format}_gm_tmp.{bedflanks}",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_genemodel.{bedflanks}"),
     shell:
@@ -74,6 +84,8 @@ rule gene_model_dist:
         anno=ANNOT_DIR + "/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_genetic_dist.{bedflanks}"),
     shell:
@@ -89,6 +101,8 @@ rule gene_names:
         anno=ANNOT_DIR + "/ensembl_gff3/Homo_sapiens.GRCh38.96.chr.GENES.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         "beds/{set}/{set}{format}_genenames.{bedflanks}",
     shell:
@@ -103,6 +117,8 @@ rule pli:
         pli=ANNOT_DIR + "/gnomad/pli_exac.csv",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_pli.{bedflanks}"),
     shell:
@@ -118,6 +134,8 @@ rule cadd_PC_phylop:
         anno=ANNOT_DIR + "/PhastCons/CADD_PC_PhyloP_scores.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_CADD_PC_PhyloP_maxsum.{bedflanks}"),
     shell:
@@ -131,6 +149,8 @@ rule cadd_features_1_7:
         anno=ANNOT_DIR + "/CADD/summarized_cadd_features.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_cadd_features_1_7_maxsum.{bedflanks}"),
     shell:
@@ -145,6 +165,8 @@ rule cadd2:
         anno=ANNOT_DIR + "/CADD/CADD_GRCh38-v1.7.bedGraph_10PHRED.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_cadd2_count.{bedflanks}"),
     shell:
@@ -158,6 +180,8 @@ rule gerp:
         anno=ANNOT_DIR + "/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_gerp_max.{bedflanks}"),
     shell:
@@ -171,6 +195,8 @@ rule gerp2:
         anno=ANNOT_DIR + "/gerp/gerp_score2_hg38_MAM_90q.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_gerp2_count.{bedflanks}"),
     shell:
@@ -185,6 +211,8 @@ rule LINSIGHT:
         anno=ANNOT_DIR + "/linsight/LINSIGHT_hg38_sort.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_linsight_sum.{bedflanks}"),
     shell:
@@ -199,6 +227,8 @@ rule EP:
         ep=ANNOT_DIR + "/enhancer-promoter-links/sorted_encode.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         o1=temp("beds/{set}/{set}{format}_EP.{bedflanks}"),
     shell:
@@ -213,6 +243,8 @@ rule fire:
         anno=ANNOT_DIR + "/FIRE/fire_{celllines}.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_fire_{celllines}.{bedflanks}"),
     shell:
@@ -237,6 +269,8 @@ rule HIC_hESC:
         hic=ANNOT_DIR + "/hic/hESC/combined/sorted.total.combined.domain",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         o1=temp("beds/{set}/{set}{format}_HIC_hESC.{bedflanks}"),
     shell:
@@ -251,6 +285,8 @@ rule HIC_encode:
         hic=ANNOT_DIR + "/Encode-HIC/{cells}/sorted_{tad}.bed.gz",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         o1=temp("beds/{set}/{set}{format}_encode_{cells}_{tad}_hic.{bedflanks}"),
     shell:
@@ -275,6 +311,8 @@ rule microsynteny:
         hic=ANNOT_DIR + "/synteny/microsynteny.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         o1=temp("beds/{set}/{set}{format}_microsynteny.{bedflanks}"),
     shell:
@@ -289,6 +327,8 @@ rule ccr:
         anno=ANNOT_DIR + "/ccr/ccrs.all.bed.gz",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_ccr_mean.{bedflanks}"),
     shell:
@@ -303,6 +343,8 @@ rule genomegitar1:
         anno=ANNOT_DIR + "/genomegitar/{gg}/DI_sort.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_genomegitar_{gg}.{bedflanks}"),
     shell:
@@ -337,6 +379,8 @@ rule MPC:
         anno=ANNOT_DIR + "/MPC/transcript_constraints_hg38liftover.bg.gz",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_MPC_mean.{bedflanks}"),
     shell:
@@ -351,6 +395,8 @@ rule zoonomia:
         index=ANNOT_DIR + "/zoonomia/cleaned_summarized_zoonomia.bed.gz.tbi",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_zoonomia_max_min_mean.{bedflanks}"),
     shell:
@@ -364,6 +410,8 @@ rule boundary_score:
         anno=ANNOT_DIR + "/boundary_score/boundary_score.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_boundary_score_count_sum.{bedflanks}"),
     shell:
@@ -377,6 +425,8 @@ rule screen:
         anno=ANNOT_DIR + "/screen/GRCh38-cCREs_sorted.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_screen_counts.{bedflanks}"),
     shell:
@@ -391,6 +441,8 @@ rule RemapTF:
         anno=ANNOT_DIR + "/ReMap/reMapDensity2022.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_remapTF_mean.{bedflanks}"),
     shell:
@@ -406,6 +458,8 @@ rule encode:
         anno=ANNOT_DIR + "/encode/{encodes}/{encodes}_merged_90quant.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_encode_{encodes}_mean.{bedflanks}"),
     shell:
@@ -428,6 +482,8 @@ rule chromHMM_MAX:
         anno=ANNOT_DIR + "/chromhmm/chromHMM_GRCh38.bg.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_chromHMM_max.{bedflanks}"),
     shell:
@@ -442,6 +498,8 @@ rule Fantom5_counts:
         anno=ANNOT_DIR + "/fantom5/F5.hg38.enhancers_sort.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_f5_counts.{bedflanks}"),
     shell:
@@ -456,6 +514,8 @@ rule HI:
         anno=ANNOT_DIR + "/DDD_HI/hg38_HI_Predictions_version3_sort.bed",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         temp("beds/{set}/{set}{format}_dddhi.{bedflanks}"),
     shell:
@@ -469,6 +529,8 @@ rule deepc:
         anno=ANNOT_DIR + "/deepc/saliencies_merged_gm12878_5kb_10bp.bed.gz",
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         temp("beds/{set}/{set}{format}_deepc.{bedflanks}"),
     shell:
@@ -515,6 +577,8 @@ rule complete_CB_annotation:
         "beds/{set}/{set}{format}_matrix.{bedflanks}",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     shell:
         """
         paste <(cut -f1-3 {input.input}) \
@@ -566,6 +630,8 @@ if config["sequence_model"]:
 
         conda:
             "../envs/SV.yml"
+        container:
+            container_for("sv")
         shell:
             """
             touch {input.SBtrue}
@@ -585,6 +651,8 @@ if config["sequence_model"]:
                 "beds/{set}/{set}{format}_generated_models{flanksize}.txt"
             conda:
                 "../envs/training.yml"
+            container:
+                container_for("training")
             shell:
                 """
                 python {workflow.basedir}/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
@@ -602,6 +670,8 @@ if config["sequence_model"]:
                     scored="beds/{set}/output/{set}{format}_score{flanksize}.bed"
                 conda:
                     "../envs/training.yml"
+                container:
+                    container_for("training")
                 shell:
                     """
                     python {workflow.basedir}/scripts/scoring_allscores.py <(cut -f1-4 {input.input}) {input.XB} {input.SB} {input.SBref} {input.DB} {output.scored}
@@ -616,6 +686,8 @@ if config["sequence_model"]:
                     scored="beds/{set}/output/{set}{format}_score{flanksize}.bed"
                 conda:
                     "../envs/training.yml"
+                container:
+                    container_for("training")
                 shell:
                     """
                     python {workflow.basedir}/scripts/scoring.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
@@ -632,6 +704,8 @@ if config["sequence_model"]:
                 "beds/{set}/{set}{format}_generated_models_seqonly{flanksize}.txt"
             conda:
                 "../envs/training.yml"
+            container:
+                container_for("training")
             shell:
                 """
                 python {workflow.basedir}/scripts/training_SBtests.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
@@ -649,6 +723,8 @@ else:
 
         conda:
             "../envs/SV.yml"
+        container:
+            container_for("sv")
         shell:
             """
             python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {output.CB} 
@@ -665,6 +741,8 @@ else:
                 "beds/{set}/{set}{format}_generated_models{flanksize}.txt"
             conda:
                 "../envs/training.yml"
+            container:
+                container_for("training")
             shell:
                 """
                 python {workflow.basedir}/scripts/training.py {input.CB} {input.SB} {input.XB} {input.input} {wildcards.flanksize} {wildcards.set} > {output}
@@ -678,6 +756,8 @@ else:
                 scored="beds/{set}/output/{set}{format}_score{flanksize}.bed"
             conda:
                 "../envs/training.yml"
+            container:
+                container_for("training")
             shell:
                 """
                 python {workflow.basedir}/scripts/scoring_CBonly.py <(cut -f1-4 {input.input}) {input.XB} {output.scored}
