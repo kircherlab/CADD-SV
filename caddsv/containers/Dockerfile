@@ -11,12 +11,13 @@ LABEL org.opencontainers.image.version="${CADD_SV_VERSION}"
 COPY ${ENV_FILE} /tmp/caddsv-environment.yml
 
 RUN sed -i '/^name:/d; /^prefix:/d' /tmp/caddsv-environment.yml && \
-    conda env update --name base --file /tmp/caddsv-environment.yml && \
+    conda env create --name caddsv --file /tmp/caddsv-environment.yml --solver libmamba && \
     conda clean --all --yes && \
     rm /tmp/caddsv-environment.yml
 
 # Apptainer exec does not rely on Docker entrypoint activation, so expose the
-# Miniforge base environment directly.
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV CONDA_PREFIX="/opt/conda"
+# isolated CADD-SV environment directly. Conda invokes libmamba only as its
+# solver; no mamba command is used.
+ENV PATH="/opt/conda/envs/caddsv/bin:/opt/conda/bin:${PATH}"
+ENV CONDA_PREFIX="/opt/conda/envs/caddsv"
 ENV PYTHONNOUSERSITE="1"
