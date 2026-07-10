@@ -24,16 +24,16 @@ jobs:
       matrix:
         include:
           - environment: preprocessing
-            env_file: workflow/envs/preprocessing.yml
+            env_file: caddsv/workflow/envs/preprocessing.yml
             image: cadd-sv-preprocessing
           - environment: sv
-            env_file: workflow/envs/SV.yml
+            env_file: caddsv/workflow/envs/SV.yml
             image: cadd-sv-sv
           - environment: nt
-            env_file: workflow/envs/NT.yml
+            env_file: caddsv/workflow/envs/NT.yml
             image: cadd-sv-nt
           - environment: training
-            env_file: workflow/envs/training.yml
+            env_file: caddsv/workflow/envs/training.yml
             image: cadd-sv-training
 
     steps:
@@ -62,8 +62,8 @@ jobs:
       - name: Build and publish ${{ matrix.environment }} image
         uses: docker/build-push-action@v6
         with:
-          context: caddsv
-          file: containers/Dockerfile
+          context: .
+          file: caddsv/containers/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.version.outputs.value }}
