@@ -1,0 +1,2 @@
+caddsv/workflow/Snakefile whitespace=cr-at-eol
+caddsv/workflow/rules/annotations.smk whitespace=cr-at-eol

@@ -1,4 +1,5 @@
 from pathlib import Path, PurePosixPath
+import shlex
 import subprocess
 import sys
 from typing import List, Optional
@@ -21,6 +22,12 @@ MODELS_DIR = WORKFLOW_DIR / "models"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
 CONDA_PREFIX_ENV_VAR = "CADD_SV_CONDA_PREFIX"
 CONDA_CACHE_SUBDIR = Path("caddsv") / "snakemake-conda"
+SINGULARITY_PREFIX_ENV_VARS = (
+    "CADD_SV_SINGULARITY_PREFIX",
+    "APPTAINER_CACHEDIR",
+    "SINGULARITY_CACHEDIR",
+)
+SINGULARITY_CACHE_SUBDIR = Path("caddsv") / "snakemake-singularity"
 SEGMENTNT_REPO_ID = "InstaDeepAI/segment_nt"
 SEGMENTNT_DIRNAME = "segment_nt"
 ANNOTATIONS_ARCHIVE_URL = "https://kircherlab.bihealth.org/download/CADD-SV/v2.0/dependencies.tar.gz"
@@ -194,6 +201,52 @@ def resolve_conda_prefix(conda_prefix: Optional[Path]) -> Path:
     return _default_conda_prefix().expanduser().resolve()
 
 
+def _default_singularity_prefix() -> Path:
+    cache_home = os.environ.get("XDG_CACHE_HOME")
+    cache_base = (
+        Path(cache_home).expanduser()
+        if cache_home
+        else Path.home() / ".cache"
+    )
+    return cache_base / SINGULARITY_CACHE_SUBDIR
+
+
+def resolve_singularity_prefix(singularity_prefix: Optional[Path]) -> Path:
+    if singularity_prefix is not None:
+        return Path(singularity_prefix).expanduser().resolve()
+
+    for env_var in SINGULARITY_PREFIX_ENV_VARS:
+        env_value = os.environ.get(env_var)
+        if env_value:
+            return Path(env_value).expanduser().resolve()
+
+    return _default_singularity_prefix().expanduser().resolve()
+
+
+def build_singularity_args(
+    annot_dir: str,
+    segmentnt_model_dir: str,
+    user_args: Optional[str],
+) -> str:
+    """Bind packaged scripts and external data at their absolute host paths."""
+    bind_paths = [WORKFLOW_DIR, Path(annot_dir), Path(segmentnt_model_dir)]
+    seen = set()
+    args: List[str] = []
+
+    for path in bind_paths:
+        resolved = path.expanduser().resolve()
+        if not resolved.exists() or resolved in seen:
+            continue
+        seen.add(resolved)
+        binding = f"{resolved}:{resolved}:ro"
+        args.extend(["--bind", shlex.quote(binding)])
+
+    if user_args:
+        args.append(user_args)
+
+    return " ".join(args)
+
+
 def resolve_scaler_dir(scaler_dir: Optional[Path]) -> Path:
     if scaler_dir is None:
         raise typer.BadParameter(
@@ -213,7 +266,7 @@ def _build_snakemake_command(
     cfg: Path,
     results_dir: Path,
     threads: int,
-    conda_prefix: Path,
+    conda_prefix: Optional[Path],
     datasets_value: str,
     mode: str,
     sequence_model: bool,
@@ -222,7 +275,14 @@ def _build_snakemake_command(
     segmentnt_model_dir: str,
     force: bool,
     unlock: bool,
+    use_conda: bool = True,
+    use_singularity: bool = False,
+    singularity_prefix: Optional[Path] = None,
+    singularity_args: Optional[str] = None,
 ) -> List[str]:
+    if use_conda and use_singularity:
+        raise ValueError("conda and singularity backends are mutually exclusive")
+
     cmd = [
         sys.executable,
         "-m",
@@ -236,17 +296,44 @@ def _build_snakemake_command(
         "--cores",
         str(threads),
         "--rerun-incomplete",
-        "--use-conda",
-        "--conda-prefix",
-        str(conda_prefix),
-        "--config",
-        f"dataset={datasets_value}",
-        f"mode={mode}",
-        f"sequence_model={'True' if sequence_model else 'False'}",
-        f"all_scores={'True' if all_scores else 'False'}",
-        f"annotations_dir={annot_dir}",
-        f"segmentnt_model_dir={segmentnt_model_dir}",
     ]
+    if use_conda:
+        if conda_prefix is None:
+            raise ValueError("conda_prefix is required when use_conda is enabled")
+        cmd.extend(
+            [
+                "--use-conda",
+                "--conda-prefix",
+                str(conda_prefix),
+                "--conda-frontend",
+                "conda",
+            ]
+        )
+    elif use_singularity:
+        if singularity_prefix is None:
+            raise ValueError(
+                "singularity_prefix is required when singularity is enabled"
+            )
+        cmd.extend(
+            [
+                "--use-singularity",
+                "--singularity-prefix",
+                str(singularity_prefix),
+            ]
+        )
+        if singularity_args:
+            cmd.extend(["--singularity-args", singularity_args])
+    cmd.extend(
+        [
+            "--config",
+            f"dataset={datasets_value}",
+            f"mode={mode}",
+            f"sequence_model={'True' if sequence_model else 'False'}",
+            f"all_scores={'True' if all_scores else 'False'}",
+            f"annotations_dir={annot_dir}",
+            f"segmentnt_model_dir={segmentnt_model_dir}",
+        ]
+    )
     if force:
         cmd.append("--forceall")
     if unlock:
@@ -294,6 +381,7 @@ def get(
 
 @app.command()
 def run(
+    ctx: typer.Context,
     items: List[str] = typer.Argument(
         ...,
         help=(
@@ -343,6 +431,41 @@ def run(
             "(default: CADD_SV_CONDA_PREFIX or user cache)."
         ),
     ),
+    use_conda: bool = typer.Option(
+        True,
+        "--use-conda/--no-use-conda",
+        help=(
+            "Use Snakemake conda environments. Disable this when all workflow "
+            "dependencies are already available in the parent environment."
+        ),
+    ),
+    use_singularity: bool = typer.Option(
+        False,
+        "--use-singularity",
+        "--use-apptainer",
+        help=(
+            "Run rules in their versioned Singularity/Apptainer containers "
+            "instead of creating conda environments."
+        ),
+    ),
+    singularity_prefix: Optional[Path] = typer.Option(
+        None,
+        "--singularity-prefix",
+        "--apptainer-prefix",
+        help=(
+            "Directory for cached Singularity/Apptainer images "
+            "(default: CADD_SV_SINGULARITY_PREFIX, runtime cache, or user cache)."
+        ),
+    ),
+    singularity_args: Optional[str] = typer.Option(
+        None,
+        "--singularity-args",
+        "--apptainer-args",
+        help=(
+            "Additional arguments passed to Singularity/Apptainer; use '--nv' "
+            "for NVIDIA GPU access."
+        ),
+    ),
     check_time: bool = typer.Option(
         False,
         "--check-time",
@@ -351,6 +474,29 @@ def run(
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
     annot_dir = str(Path(annotations_dir).resolve()) if annotations_dir else str(Path("annotations").resolve())
+
+    use_conda_was_explicit = (
+        ctx.get_parameter_source("use_conda").name == "COMMANDLINE"
+    )
+    if use_singularity and use_conda and use_conda_was_explicit:
+        raise typer.BadParameter(
+            "--use-conda and --use-singularity are mutually exclusive."
+        )
+    if use_singularity:
+        use_conda = False
+
+    if not use_conda and conda_prefix is not None:
+        raise typer.BadParameter(
+            "--conda-prefix can only be used with the conda backend."
+        )
+    if not use_singularity and singularity_prefix is not None:
+        raise typer.BadParameter(
+            "--singularity-prefix requires --use-singularity."
+        )
+    if not use_singularity and singularity_args is not None:
+        raise typer.BadParameter(
+            "--singularity-args requires --use-singularity."
+        )
 
     # Override mode if sequence_only flag is set
     if sequence_only:
@@ -523,12 +669,26 @@ def run(
             datasets.append(name)
 
     datasets_value = ",".join(datasets)
-    resolved_conda_prefix = resolve_conda_prefix(conda_prefix)
-    resolved_conda_prefix.mkdir(parents=True, exist_ok=True)
+    resolved_conda_prefix: Optional[Path] = None
+    resolved_singularity_prefix: Optional[Path] = None
+    resolved_singularity_args: Optional[str] = None
+    if use_conda:
+        resolved_conda_prefix = resolve_conda_prefix(conda_prefix)
+        resolved_conda_prefix.mkdir(parents=True, exist_ok=True)
     segmentnt_model_dir = os.environ.get(
         "SEGMENTNT_MODEL",
         str(Path(annot_dir) / SEGMENTNT_DIRNAME),
     )
+    if use_singularity:
+        resolved_singularity_prefix = resolve_singularity_prefix(
+            singularity_prefix
+        )
+        resolved_singularity_prefix.mkdir(parents=True, exist_ok=True)
+        resolved_singularity_args = build_singularity_args(
+            annot_dir,
+            segmentnt_model_dir,
+            singularity_args,
+        )
     cmd = _build_snakemake_command(
         cfg=Path(cfg),
         results_dir=results_dir,
@@ -542,6 +702,10 @@ def run(
         segmentnt_model_dir=segmentnt_model_dir,
         force=force,
         unlock=unlock,
+        use_conda=use_conda,
+        use_singularity=use_singularity,
+        singularity_prefix=resolved_singularity_prefix,
+        singularity_args=resolved_singularity_args,
     )
 
     typer.echo("Running:\n  " + " ".join(cmd))

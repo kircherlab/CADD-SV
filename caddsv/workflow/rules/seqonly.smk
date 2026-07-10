@@ -19,6 +19,8 @@ rule seqonly_preprocess:
         ref="beds/{set}/{set}_seqonly_ref.bed"
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     shell:
         """
         mkdir -p beds/{wildcards.set}
@@ -32,6 +34,8 @@ rule seqonly_run_nt_sample:
         "beds/{set}/{set}_seqonly_sample.bed"
     conda:
         "../envs/NT.yml"
+    container:
+        container_for("nt")
     resources:
         gpu=1 if gpu_available else 0,
         mem_gb=200
@@ -55,6 +59,8 @@ rule seqonly_run_nt_ref:
         "beds/{set}/{set}_seqonly_ref.bed"
     conda:
         "../envs/NT.yml"
+    container:
+        container_for("nt")
     resources:
         gpu=1 if gpu_available else 0,
         mem_gb=200
@@ -79,6 +85,8 @@ rule seqonly_SB_features:
         probabilities="beds/{set}/{set}_seqonly_sample.h5"
     conda:
         "../envs/NT.yml"
+    container:
+        container_for("nt")
     output:
         "beds/{set}/{set}_seqonly_SB.bed"
     shell:
@@ -94,6 +102,8 @@ rule seqonly_SBref_features:
         probabilities="beds/{set}/{set}_seqonly_ref.h5"
     conda:
         "../envs/NT.yml"
+    container:
+        container_for("nt")
     output:
         "beds/{set}/{set}_seqonly_SBref.bed"
     shell:
@@ -113,6 +123,8 @@ rule seqonly_DB_features:
         SBref="beds/{set}/{set}_seqonly_SBref.bed"
     conda:
         "../envs/NT.yml"
+    container:
+        container_for("nt")
     output:
         "beds/{set}/{set}_seqonly_DB.bed"
     shell:
@@ -131,6 +143,8 @@ rule seqonly_scoring:
         DB="beds/{set}/{set}_seqonly_DB.bed"
     conda:
         "../envs/training.yml"
+    container:
+        container_for("training")
     output:
         "beds/{set}/output/{set}_seqonly_score.tsv"
     shell:

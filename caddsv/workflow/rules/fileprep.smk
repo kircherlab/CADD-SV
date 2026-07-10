@@ -7,6 +7,8 @@ rule prep_files:
         genome=ANNOT_DIR + "/ucsc/hg38.fa.bgz"
     conda:
         "../envs/preprocessing.yml"
+    container:
+        container_for("preprocessing")
     output:
         CB="beds/{set}/{set}{format}_CBinput.bed",
         SB="beds/{set}/{set}{format}_SBinput.bed",
@@ -26,6 +28,8 @@ rule flanks:
         genome=ANNOT_DIR + "/ucsc/hg38.fa.sorted.genome",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     params:
         tmpup="beds/{set}/{set}{format}_CBinput.bedup_tmp",
         flanksize=config["flank"],
@@ -45,6 +49,8 @@ if config["sequence_model"]:
             "beds/{set}/{set}{format}_SBrefinput.bed"
         conda:
             "../envs/NT.yml"
+        container:
+            container_for("nt")
         resources:
             gpu=1 if gpu_available else 0,
             mem_gb=200
@@ -66,6 +72,8 @@ if config["sequence_model"]:
             "beds/{set}/{set}{format}_SBinput.bed"
         conda:
             "../envs/NT.yml"
+        container:
+            container_for("nt")
         resources:
             gpu=1 if gpu_available else 0,
             mem_gb=200
@@ -90,6 +98,8 @@ if config["sequence_model"]:
             refprobabilities="beds/{set}/{set}{format}_SBrefprobabilities.h5"
         conda:
             "../envs/NT.yml"
+        container:
+            container_for("nt")
         output:
             SB = "beds/{set}/{set}{format}_SBfeatures.bed",
             SBref = "beds/{set}/{set}{format}_SBreffeatures.bed"
@@ -110,6 +120,8 @@ if config["sequence_model"]:
             SBref = "beds/{set}/{set}{format}_SBreffeatures.bed"
         conda:
             "../envs/NT.yml"
+        container:
+            container_for("nt")
         output:
             DB = "beds/{set}/{set}{format}_DBfeatures.bed"
         shell:

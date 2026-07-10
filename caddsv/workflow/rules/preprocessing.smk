@@ -3,6 +3,8 @@ rule prep_chr1:
         "beds/{set}/{set}{format}_CBinput.{bedflanks}",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         "beds/{set}/{set}{format}_wchr.{bedflanks}",
     shell:
@@ -16,6 +18,8 @@ rule prep_chr2:
         "beds/{set}/{set}{format}_wchr.{bedflanks}",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         "beds/{set}/{set}{format}_nochr.{bedflanks}",
     shell:
@@ -30,6 +34,8 @@ rule prep_merg1:
         wchr="beds/{set}/{set}{format}_wchr.{bedflanks}",
     conda:
         "../envs/SV.yml"
+    container:
+        container_for("sv")
     output:
         nochr="beds/{set}/{set}{format}_nochr_merged.{bedflanks}",
         wchr="beds/{set}/{set}{format}_merged.{bedflanks}",

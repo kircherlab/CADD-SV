@@ -50,5 +50,6 @@ caddsv = [
   "workflow/models/*_PHRED.tsv",
   "workflow/scripts/*.py",
   "workflow/scripts/*.sh",
+  "containers/*",
   "config.yml",
 ]
