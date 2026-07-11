@@ -1,4 +1,5 @@
 from pathlib import Path, PurePosixPath
+import hashlib
 import shlex
 import subprocess
 import sys
@@ -13,6 +14,11 @@ from datetime import datetime
 import resource
 import urllib.error
 import urllib.request
+
+from caddsv.container_images import (
+    COORDINATE_BASED_CONTAINER_ENVIRONMENTS,
+    DEFAULT_CONTAINER_IMAGES,
+)
 
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
 
@@ -223,6 +229,73 @@ def resolve_singularity_prefix(singularity_prefix: Optional[Path]) -> Path:
     return _default_singularity_prefix().expanduser().resolve()
 
 
+def container_image_path(image: str, prefix: Path) -> Path:
+    """Return the cache path Snakemake derives from a container URI."""
+    image_hash = hashlib.md5(image.encode(), usedforsecurity=False).hexdigest()
+    return prefix / f"{image_hash}.simg"
+
+
+def find_container_runtime() -> str:
+    for executable in ("apptainer", "singularity"):
+        runtime = shutil.which(executable)
+        if runtime:
+            return runtime
+    raise typer.BadParameter(
+        "Downloading environment images requires Apptainer or Singularity. "
+        "Install one of them and ensure its executable is available on PATH."
+    )
+
+
+def download_container_images(
+    target: Path,
+    coordinate_based_only: bool = False,
+    force: bool = False,
+) -> None:
+    runtime = find_container_runtime()
+    target.mkdir(parents=True, exist_ok=True)
+    environments = (
+        COORDINATE_BASED_CONTAINER_ENVIRONMENTS
+        if coordinate_based_only
+        else tuple(DEFAULT_CONTAINER_IMAGES)
+    )
+
+    for environment in environments:
+        image = DEFAULT_CONTAINER_IMAGES[environment]
+        destination = container_image_path(image, target)
+
+        if destination.exists() and not force:
+            typer.echo(f"Using cached {environment} image: {destination}")
+            continue
+
+        action = "Refreshing" if destination.exists() else "Downloading"
+        typer.echo(f"{action} {environment} image from: {image}")
+        temporary_dir = Path(
+            tempfile.mkdtemp(prefix=".caddsv-image-", dir=target)
+        )
+        temporary_image = temporary_dir / destination.name
+        try:
+            subprocess.run(
+                [runtime, "pull", str(temporary_image), image],
+                check=True,
+            )
+            if not temporary_image.is_file():
+                raise typer.BadParameter(
+                    f"The container runtime did not create the expected image: "
+                    f"{temporary_image}"
+                )
+            os.replace(temporary_image, destination)
+        except subprocess.CalledProcessError as exc:
+            raise typer.BadParameter(
+                f"Failed to download {environment} image from {image}."
+            ) from exc
+        finally:
+            shutil.rmtree(temporary_dir, ignore_errors=True)
+
+        typer.echo(f"Cached {environment} image at: {destination}")
+
+    typer.echo(f"Environment images are available at: {target}")
+
+
 def build_singularity_args(
     annot_dir: str,
     segmentnt_model_dir: str,
@@ -363,6 +436,25 @@ def get(
             "--segmentnt-repo",
             help="Hugging Face repository to use for SegmentNT model files.",
         ),
+        singularity_prefix: Optional[Path] = typer.Option(
+            None,
+            "--singularity-prefix",
+            "--apptainer-prefix",
+            help=(
+                "Directory to store prefetched environment images "
+                "(default: the CADD-SV Singularity/Apptainer cache)."
+            ),
+        ),
+        coordinate_based_only: bool = typer.Option(
+            False,
+            "--coordinate-based-only",
+            help="Download preprocessing, SV, and training images, but not NT.",
+        ),
+        force_envs: bool = typer.Option(
+            False,
+            "--force-envs",
+            help="Replace environment images already present in the cache.",
+        ),
 ):
 
     target = Path(annotations_dir).resolve() if annotations_dir else Path("annotations").resolve()
@@ -376,8 +468,16 @@ def get(
     elif flag in {"segmentnt", "segmentNT", "SegmentNT"}:
         download_segmentnt(target / SEGMENTNT_DIRNAME, segmentnt_repo, force_segmentnt)
         typer.echo("DONE")
+    elif flag == "envs":
+        image_target = resolve_singularity_prefix(singularity_prefix)
+        download_container_images(
+            image_target,
+            coordinate_based_only=coordinate_based_only,
+            force=force_envs,
+        )
+        typer.echo("DONE")
     else:
-        raise typer.BadParameter("Expected 'annotations' or 'segmentnt'.")
+        raise typer.BadParameter("Expected 'annotations', 'segmentnt', or 'envs'.")
 
 @app.command()
 def run(

@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -6,7 +7,204 @@ from unittest.mock import patch
 
 from typer.testing import CliRunner
 
-from caddsv.cli import _build_snakemake_command, app
+from caddsv.cli import (
+    DEFAULT_CONFIG,
+    _build_snakemake_command,
+    app,
+    container_image_path,
+)
+from caddsv.container_images import (
+    COORDINATE_BASED_CONTAINER_ENVIRONMENTS,
+    DEFAULT_CONTAINER_IMAGES,
+)
+
+
+class GetEnvironmentImagesTests(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+
+    def write_fake_image(self, command, check):
+        self.assertTrue(check)
+        self.assertEqual(command[1], "pull")
+        Path(command[2]).write_bytes(b"SIF")
+
+    def test_packaged_config_matches_shared_image_defaults(self):
+        config_text = DEFAULT_CONFIG.read_text()
+        for environment, image in DEFAULT_CONTAINER_IMAGES.items():
+            self.assertIn(f"{environment}: {image}", config_text)
+
+    def test_get_envs_downloads_all_images_with_snakemake_names(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "images"
+            with (
+                patch("caddsv.cli.shutil.which", return_value="/usr/bin/apptainer"),
+                patch(
+                    "caddsv.cli.subprocess.run",
+                    side_effect=self.write_fake_image,
+                ) as run_mock,
+            ):
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--apptainer-prefix", str(prefix)],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertEqual(run_mock.call_count, 4)
+            for call, image in zip(
+                run_mock.call_args_list,
+                DEFAULT_CONTAINER_IMAGES.values(),
+            ):
+                command = call.args[0]
+                self.assertEqual(command[0], "/usr/bin/apptainer")
+                self.assertEqual(command[3], image)
+                self.assertTrue(container_image_path(image, prefix).is_file())
+            self.assertFalse(list(prefix.glob(".caddsv-image-*")))
+
+    def test_coordinate_based_only_omits_nt_image(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "images"
+            with (
+                patch("caddsv.cli.shutil.which", return_value="/usr/bin/apptainer"),
+                patch(
+                    "caddsv.cli.subprocess.run",
+                    side_effect=self.write_fake_image,
+                ) as run_mock,
+            ):
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "get",
+                        "envs",
+                        "--coordinate-based-only",
+                        "--apptainer-prefix",
+                        str(prefix),
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            pulled_images = [call.args[0][3] for call in run_mock.call_args_list]
+            self.assertEqual(
+                pulled_images,
+                [
+                    DEFAULT_CONTAINER_IMAGES[environment]
+                    for environment in COORDINATE_BASED_CONTAINER_ENVIRONMENTS
+                ],
+            )
+            self.assertNotIn(DEFAULT_CONTAINER_IMAGES["nt"], pulled_images)
+
+    def test_existing_images_are_skipped_and_force_envs_refreshes_them(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "images"
+            prefix.mkdir()
+            for image in DEFAULT_CONTAINER_IMAGES.values():
+                container_image_path(image, prefix).write_bytes(b"old")
+
+            with (
+                patch("caddsv.cli.shutil.which", return_value="/usr/bin/apptainer"),
+                patch("caddsv.cli.subprocess.run") as run_mock,
+            ):
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--apptainer-prefix", str(prefix)],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            run_mock.assert_not_called()
+
+            with (
+                patch("caddsv.cli.shutil.which", return_value="/usr/bin/apptainer"),
+                patch(
+                    "caddsv.cli.subprocess.run",
+                    side_effect=self.write_fake_image,
+                ) as run_mock,
+            ):
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "get",
+                        "envs",
+                        "--apptainer-prefix",
+                        str(prefix),
+                        "--force-envs",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertEqual(run_mock.call_count, 4)
+            for image in DEFAULT_CONTAINER_IMAGES.values():
+                self.assertEqual(container_image_path(image, prefix).read_bytes(), b"SIF")
+
+    def test_get_envs_uses_environment_prefix_and_singularity_fallback(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "images"
+
+            def find_runtime(executable):
+                return "/usr/bin/singularity" if executable == "singularity" else None
+
+            with (
+                patch("caddsv.cli.shutil.which", side_effect=find_runtime),
+                patch(
+                    "caddsv.cli.subprocess.run",
+                    side_effect=self.write_fake_image,
+                ) as run_mock,
+            ):
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--coordinate-based-only"],
+                    env={"CADD_SV_SINGULARITY_PREFIX": str(prefix)},
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertTrue(prefix.is_dir())
+            self.assertTrue(
+                all(
+                    call.args[0][0] == "/usr/bin/singularity"
+                    for call in run_mock.call_args_list
+                )
+            )
+
+    def test_get_envs_stops_and_cleans_up_after_pull_failure(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "images"
+            call_count = 0
+
+            def fail_second_pull(command, check):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 2:
+                    raise subprocess.CalledProcessError(1, command)
+                self.write_fake_image(command, check)
+
+            with (
+                patch("caddsv.cli.shutil.which", return_value="/usr/bin/apptainer"),
+                patch("caddsv.cli.subprocess.run", side_effect=fail_second_pull),
+            ):
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--apptainer-prefix", str(prefix)],
+                )
+
+            self.assertEqual(result.exit_code, 2, result.output)
+            self.assertEqual(call_count, 2)
+            self.assertIn("Failed to download sv image", result.output)
+            self.assertTrue(
+                container_image_path(
+                    DEFAULT_CONTAINER_IMAGES["preprocessing"], prefix
+                ).is_file()
+            )
+            self.assertFalse(list(prefix.glob(".caddsv-image-*")))
+
+    def test_get_envs_requires_a_container_runtime(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.runner.invoke(
+                app,
+                ["get", "envs", "--apptainer-prefix", tmpdir],
+                env={"PATH": ""},
+            )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("Downloading environment images requires Apptainer", result.output)
+        self.assertIn("Singularity.", result.output)
 
 
 class BuildSnakemakeCommandTests(unittest.TestCase):

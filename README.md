@@ -25,11 +25,14 @@ Alternatively, install CADD-SV from Bioconda:
 ```bash
 conda install -c bioconda caddsv
 ```
-Installation through PyPI is also available, conda will still be needed to run it
+Installation through PyPI is also available:
 
 ```bash
 pip install caddsv
 ```
+Conda is the default workflow backend. Apptainer or Singularity can be used
+instead with `--use-apptainer`.
+
 Download the annotation bundle:
 
 ```bash
@@ -102,16 +105,24 @@ For Singularity/Apptainer deployments, use the versioned OCI image assigned to
 each workflow environment:
 
 ```bash
+caddsv get envs \
+  --apptainer-prefix /scratch/$USER/caddsv-singularity
+
 caddsv run sample.bed \
-  --use-singularity \
-  --singularity-prefix /scratch/$USER/caddsv-singularity
+  --use-apptainer \
+  --apptainer-prefix /scratch/$USER/caddsv-singularity
 ```
 
 Images are cached in `${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-singularity`
-by default. Override the image URIs, including with local SIF paths on an
-air-gapped cluster, through the `containers` mapping in a config file. The
-package includes the Dockerfile and environment definitions used to build the
-images; image binaries are published separately.
+by default. `caddsv get envs` downloads all four images before execution, which
+avoids simultaneous first-time pulls when multiple runs start in parallel. For
+coordinate-only scoring, `--coordinate-based-only` omits the unused NT image.
+Existing images are reused unless `--force-envs` is supplied.
+
+Override the image URIs, including with local SIF paths on an air-gapped
+cluster, through the `containers` mapping in a config file. The package includes
+the Dockerfile and environment definitions used to build the images; image
+binaries are published separately.
 
 For GPU-enabled SegmentNT execution, pass the runtime flag explicitly:
 
@@ -344,6 +355,7 @@ inspection.
 ```bash
 caddsv get annotations [--annotations-dir PATH] [--with-segmentnt] [--force-segmentnt]
 caddsv get segmentnt   [--annotations-dir PATH] [--force-segmentnt] [--segmentnt-repo REPO]
+caddsv get envs        [--apptainer-prefix PATH] [--coordinate-based-only] [--force-envs]
 ```
 
 | Option | Meaning |
@@ -352,6 +364,9 @@ caddsv get segmentnt   [--annotations-dir PATH] [--force-segmentnt] [--segmentnt
 | `--with-segmentnt` | Also download SegmentNT into `<annotations-dir>/segment_nt`. |
 | `--force-segmentnt` | Replace an existing local SegmentNT directory. |
 | `--segmentnt-repo REPO` | Hugging Face SegmentNT repository. Default: `InstaDeepAI/segment_nt`. |
+| `--apptainer-prefix PATH` / `--singularity-prefix PATH` | Environment image directory; uses the same default and overrides as `caddsv run`. |
+| `--coordinate-based-only` | Prefetch preprocessing, SV, and training images without NT. |
+| `--force-envs` | Re-download environment images already present. |
 
 ### `caddsv run`
 
@@ -367,8 +382,8 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 | `--use-conda` / `--no-use-conda` | Enable or disable Snakemake conda environments. Enabled by default. |
 | `--conda-prefix PATH` | Snakemake conda environment directory. |
 | `--use-singularity` / `--use-apptainer` | Run rules in their versioned OCI/SIF containers. |
-| `--singularity-prefix PATH` | Singularity/Apptainer image cache directory. |
-| `--singularity-args TEXT` | Extra runtime arguments, such as `--nv` for GPUs. |
+| `--singularity-prefix PATH` / `--apptainer-prefix PATH` | Singularity/Apptainer image cache directory. |
+| `--singularity-args TEXT` / `--apptainer-args TEXT` | Extra runtime arguments, such as `--nv` for GPUs. |
 | `--config`, `-c PATH` | Alternate Snakemake YAML configuration. |
 | `--seqresolved` | Add SegmentNT-derived features to coordinate-based scoring. |
 | `--seqonly` | Run sequence-only scoring from REF/ALT TSV input. |
@@ -378,8 +393,10 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 
 ## Runtime Notes
 
-- First runs are slower because Snakemake creates or pulls software environments.
-- In containerized runs, use `--no-use-conda` for a prebuilt parent environment or `--use-singularity` for per-rule images.
+- First runs are slower because Snakemake creates or pulls software environments;
+  use `caddsv get envs` before parallel containerized runs.
+- In containerized runs, use `--no-use-conda` for a prebuilt parent environment
+  or `--use-apptainer` for per-rule images.
 - Use the same `--output-dir` to resume or reuse work from an interrupted run.
 - Use a new `--output-dir` when comparing inputs with the same filename stem.
 - `--threads` controls Snakemake cores, but some steps are I/O-bound.

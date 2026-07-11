@@ -15,6 +15,7 @@ docker build \
 ```
 
 Valid environment files are `preprocessing.yml`, `SV.yml`, `NT.yml`, and
-`training.yml`. Release tags publish the corresponding images to GHCR. The
-workflow defaults can be overridden through the `containers` mapping in a
-CADD-SV config file, including with paths to prebuilt local SIF images.
+`training.yml`. The root-level `dockerhub` scripts publish the corresponding
+images to the public `ocatona/cadd-sv-envs` Docker Hub repository. The workflow
+defaults can be overridden through the `containers` mapping in a CADD-SV config
+file, including with paths to prebuilt local SIF images.
