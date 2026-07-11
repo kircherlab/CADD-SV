@@ -1,5 +1,5 @@
 # CADD-SV
-[![Release](https://img.shields.io/badge/release-v2.0-green)](https://github.com/kircherlab/CADD-SV/releases/tag/v2.0)
+[![GitHub release](https://img.shields.io/github/v/release/kircherlab/CADD-SV)](https://github.com/kircherlab/CADD-SV/releases/latest)
 [![PyPI version](https://img.shields.io/pypi/v/caddsv.svg)](https://pypi.org/project/caddsv/)
 [![Bioconda version](https://img.shields.io/conda/vn/bioconda/caddsv.svg?style=flat)](https://bioconda.github.io/recipes/caddsv/README.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/kircherlab/CADD-SV/blob/main/LICENSE)
@@ -30,8 +30,8 @@ Installation through PyPI is also available:
 ```bash
 pip install caddsv
 ```
-Conda is the default workflow backend. Apptainer or Singularity can be used
-instead with `--use-apptainer`.
+Conda is the default workflow backend: running `caddsv run` without container
+options lets Snakemake create and reuse the required Conda environments.
 
 Download the annotation bundle:
 
@@ -68,11 +68,11 @@ caddsv get annotations \
   --with-segmentnt
 ```
 
-## Installation Notes
+## Default runtime: Conda
 
 CADD-SV installs with `pip install .` from this repository or from Bioconda. The
 package includes the CLI and workflow files. By default, full scoring also uses
-conda at runtime so Snakemake can create isolated environments for the workflow
+Conda at runtime so Snakemake can create isolated environments for the workflow
 rules.
 
 By default, those environments are cached under:
@@ -101,8 +101,18 @@ package required by the selected workflow rules must already be available in
 the parent environment. The files under `caddsv/workflow/envs/` describe those
 rule dependencies.
 
-For Singularity/Apptainer deployments, use the versioned OCI image assigned to
-each workflow environment:
+## Optional: Apptainer/Singularity for pipelines
+
+Conda is the recommended default for an interactive or single-machine CADD-SV
+run. Use Apptainer or Singularity when CADD-SV is part of a scheduled pipeline,
+when execution happens on multiple compute nodes, or when the pipeline platform
+requires containers. Containerized runs use fixed versioned images instead of
+creating Conda environments for the workflow rules.
+
+Prefetch the images once into storage that is available to the pipeline jobs,
+then use that same location for every run. This avoids concurrent first-time
+image pulls when many jobs start together and makes each job reuse the prepared
+images:
 
 ```bash
 caddsv get envs \
@@ -119,16 +129,19 @@ avoids simultaneous first-time pulls when multiple runs start in parallel. For
 coordinate-only scoring, `--coordinate-based-only` omits the unused NT image.
 Existing images are reused unless `--force-envs` is supplied.
 
+Apptainer or Singularity must be installed on every execution host. The
+`--use-apptainer` and `--use-singularity` flags are equivalent; use the former
+when that is the runtime installed on the system. For GPU-enabled SegmentNT
+execution, pass the runtime flag explicitly:
+
+```bash
+caddsv run sample.bed --use-apptainer --apptainer-args=--nv
+```
+
 Override the image URIs, including with local SIF paths on an air-gapped
 cluster, through the `containers` mapping in a config file. The package includes
 the Dockerfile and environment definitions used to build the images; image
 binaries are published separately.
-
-For GPU-enabled SegmentNT execution, pass the runtime flag explicitly:
-
-```bash
-caddsv run sample.bed --use-singularity --singularity-args=--nv
-```
 
 ## Data
 
@@ -430,6 +443,47 @@ caddsv run sample.bed --config custom.yml
 ```
 
 The packaged default config is `caddsv/config.yml`.
+
+## How to cite CADD-SV
+
+If you use CADD-SV v2.0, please cite the following preprint:
+
+> Catona O, Kircher M
+>
+> *Coordinate- and Sequence-Based Features for a new Combined
+> Annotation-Dependent Depletion Framework of Structural Variants
+> (CADD-SV v2.0)*
+>
+> bioRxiv. 2026.07.08.736040. Posted July 10, 2026.
+>
+> DOI: [10.64898/2026.07.08.736040](https://doi.org/10.64898/2026.07.08.736040).
+>
+> This article is a preprint and has not been certified by peer review.
+
+CADD-SV v1.x has been published as a research article in *Genome Research*;
+please cite the following paper:
+
+> Philip Kleinert P, Kircher M
+>
+> *A framework to score the effects of structural variants in health and disease*
+>
+> *Genome Research*. 2022 Apr;32(4):766-777.
+>
+> DOI: [10.1101/gr.275995.121](https://doi.org/10.1101/gr.275995.121). Epub 2022 Feb 23.
+>
+> PubMed PMID: [35197310](http://www.ncbi.nlm.nih.gov/pubmed/35197310).
+
+If you want to reference the concept behind CADD, please cite:
+
+> Kircher M, Witten DM, Jain P, O'Roak BJ, Cooper GM, Shendure J.
+>
+> *A general framework for estimating the relative pathogenicity of human genetic variants.*
+>
+> *Nature Genetics*. 2014 Feb 2.
+>
+> DOI: [10.1038/ng.2892](https://doi.org/10.1038/ng.2892).
+>
+> PubMed PMID: [24487276](http://www.ncbi.nlm.nih.gov/pubmed/24487276).
 
 ## Troubleshooting
 
