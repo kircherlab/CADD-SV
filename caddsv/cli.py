@@ -1,5 +1,7 @@
 from pathlib import Path, PurePosixPath
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import hashlib
+from importlib.metadata import PackageNotFoundError, version as package_version
 import shlex
 import subprocess
 import sys
@@ -21,6 +23,32 @@ from caddsv.container_images import (
 )
 
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
+
+
+def _version_callback(value: bool) -> None:
+    if not value:
+        return
+
+    try:
+        installed_version = package_version("caddsv")
+    except PackageNotFoundError:
+        installed_version = "unknown (package metadata unavailable)"
+
+    typer.echo(installed_version)
+    raise typer.Exit()
+
+
+@app.callback()
+def cli_callback(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the installed CADD-SV version and exit.",
+    ),
+) -> None:
+    """CADD-SV command-line interface."""
 
 PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
@@ -58,6 +86,49 @@ These files are downloaded from Hugging Face for local CADD-SV SegmentNT
 inference. They are not CADD-SV-authored files. Commercial use and
 redistribution are subject to the upstream SegmentNT license.
 """
+
+_RAW_SCORE_SUFFIX = "_score"
+_SCORE_PRECISION = Decimal("0.0001")
+
+
+def _format_raw_score(value: str) -> str:
+    """Render a finite raw score with exactly four decimal places."""
+    try:
+        score = Decimal(value)
+    except (InvalidOperation, ValueError):
+        return value
+
+    if not score.is_finite():
+        return value
+
+    return format(score.quantize(_SCORE_PRECISION, rounding=ROUND_HALF_UP), "f")
+
+
+def write_final_score_file(source: Path, destination: Path) -> None:
+    """Create the user-facing score file without changing workflow output."""
+    with source.open(encoding="utf-8") as input_file:
+        header_line = input_file.readline()
+        if not header_line:
+            destination.write_text("", encoding="utf-8")
+            return
+
+        header = header_line.rstrip("\r\n").split("\t")
+        if header[0] == "chr":
+            header[0] = "#chr"
+        raw_score_indices = [
+            index
+            for index, column in enumerate(header)
+            if column.endswith(_RAW_SCORE_SUFFIX)
+        ]
+
+        with destination.open("w", encoding="utf-8", newline="\n") as output_file:
+            output_file.write("\t".join(header) + "\n")
+            for line in input_file:
+                fields = line.rstrip("\r\n").split("\t")
+                for index in raw_score_indices:
+                    if index < len(fields):
+                        fields[index] = _format_raw_score(fields[index])
+                output_file.write("\t".join(fields) + "\n")
 
 
 def _download_file(url: str, destination: Path) -> None:
@@ -811,7 +882,6 @@ def run(
     typer.echo("Running:\n  " + " ".join(cmd))
 
     env = os.environ.copy()
-    env["PYTHONNOUSERSITE"] = "1"
 
     if check_time:
         start_wall = time.perf_counter()
@@ -863,10 +933,7 @@ def run(
 
             dst = outdir / f"{name}_seqonly_score.tsv"
 
-            if dst.exists():
-                dst.unlink()
-
-            shutil.copy2(src, dst)
+            write_final_score_file(src, dst)
 
         typer.echo(f"Sequence-only scores written to: {outdir.resolve()}")
     else:
@@ -878,10 +945,7 @@ def run(
 
             dst = outdir / f"{name}_score.tsv"
 
-            if dst.exists():
-                dst.unlink()
-
-            shutil.copy2(src, dst)
+            write_final_score_file(src, dst)
 
         typer.echo(f"Final scores written to: {outdir.resolve()}")
 

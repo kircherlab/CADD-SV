@@ -2,6 +2,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from importlib.metadata import version as package_version
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,11 +13,64 @@ from caddsv.cli import (
     _build_snakemake_command,
     app,
     container_image_path,
+    write_final_score_file,
 )
 from caddsv.container_images import (
     COORDINATE_BASED_CONTAINER_ENVIRONMENTS,
     DEFAULT_CONTAINER_IMAGES,
 )
+
+
+class VersionTests(unittest.TestCase):
+    def test_version_reports_installed_distribution_metadata(self):
+        result = CliRunner().invoke(app, ["--version"])
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        self.assertEqual(result.output.strip(), package_version("caddsv"))
+
+
+class FinalScoreFileTests(unittest.TestCase):
+    def test_final_file_formats_raw_scores_and_preserves_other_values(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "workflow-score.bed"
+            destination = Path(tmpdir) / "final-score.tsv"
+            source_contents = (
+                "chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score"
+                "\tCADD-SV-SR_score\tfeature\n"
+                "chr1\t1\t2\tDEL\t12.345678\t0.123456\t0.50005\t9.876543\n"
+                "chr2\t3\t4\tDUP\tNaN\tNaN\tnot-a-number\t\n"
+            )
+            source.write_text(source_contents)
+
+            write_final_score_file(source, destination)
+
+            self.assertEqual(source.read_text(), source_contents)
+            self.assertEqual(
+                destination.read_text(),
+                (
+                    "#chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score"
+                    "\tCADD-SV-SR_score\tfeature\n"
+                    "chr1\t1\t2\tDEL\t12.345678\t0.1235\t0.5001\t9.876543\n"
+                    "chr2\t3\t4\tDUP\tNaN\tNaN\tnot-a-number\t\n"
+                ),
+            )
+
+    def test_sequence_only_final_file_keeps_its_non_chromosome_header(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            source = Path(tmpdir) / "workflow-score.tsv"
+            destination = Path(tmpdir) / "final-score.tsv"
+            source.write_text(
+                "id\ttype\tCADD-SV_seqonly_PHRED\tCADD-SV_seqonly_score\n"
+                "sample-1\tDEL\t7.123456\t0.5\n"
+            )
+
+            write_final_score_file(source, destination)
+
+            self.assertEqual(
+                destination.read_text(),
+                "id\ttype\tCADD-SV_seqonly_PHRED\tCADD-SV_seqonly_score\n"
+                "sample-1\tDEL\t7.123456\t0.5000\n",
+            )
 
 
 class GetEnvironmentImagesTests(unittest.TestCase):
@@ -294,9 +348,12 @@ class RunCommandTests(unittest.TestCase):
 
             workflow_output = results / "beds" / "sample" / "output"
             workflow_output.mkdir(parents=True)
-            (workflow_output / "samplebed_score100.bed").write_text(
-                "chr1\t1\t2\tDEL\n"
+            source = workflow_output / "samplebed_score100.bed"
+            source_contents = (
+                "chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score\n"
+                "chr1\t1\t2\tDEL\t12.345678\t0.123456\n"
             )
+            source.write_text(source_contents)
 
             cache_home = root / "cache"
             with patch("caddsv.cli.subprocess.run") as run_mock:
@@ -316,7 +373,53 @@ class RunCommandTests(unittest.TestCase):
             command = run_mock.call_args.args[0]
             self.assertNotIn("--use-conda", command)
             self.assertNotIn("--conda-prefix", command)
+            self.assertNotEqual(
+                run_mock.call_args.kwargs["env"].get("PYTHONNOUSERSITE"),
+                "1",
+            )
             self.assertFalse(cache_home.exists())
+            self.assertEqual(source.read_text(), source_contents)
+            self.assertEqual(
+                (results / "scored" / "sample_score.tsv").read_text(),
+                "#chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score\n"
+                "chr1\t1\t2\tDEL\t12.345678\t0.1235\n",
+            )
+
+    def test_sequence_only_mode_formats_final_scores_without_changing_header(self):
+        runner = CliRunner()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            results = root / "results"
+            sequence_input = root / "sample.tsv"
+            sequence_input.write_text("A\tT\tDEL\n")
+
+            workflow_output = results / "beds" / "sample" / "output"
+            workflow_output.mkdir(parents=True)
+            (workflow_output / "sample_seqonly_score.tsv").write_text(
+                "id\ttype\tCADD-SV_seqonly_PHRED\tCADD-SV_seqonly_score\n"
+                "sample\tDEL\t8.987654\t0.5\n"
+            )
+
+            with patch("caddsv.cli.subprocess.run"):
+                result = runner.invoke(
+                    app,
+                    [
+                        "run",
+                        str(sequence_input),
+                        "--seqonly",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertEqual(
+                (results / "scored" / "sample_seqonly_score.tsv").read_text(),
+                "id\ttype\tCADD-SV_seqonly_PHRED\tCADD-SV_seqonly_score\n"
+                "sample\tDEL\t8.987654\t0.5000\n",
+            )
 
     def test_singularity_mode_uses_its_cache_and_does_not_use_conda(self):
         runner = CliRunner()

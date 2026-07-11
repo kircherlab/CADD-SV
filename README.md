@@ -33,6 +33,12 @@ pip install caddsv
 Conda is the default workflow backend: running `caddsv run` without container
 options lets Snakemake create and reuse the required Conda environments.
 
+Check the installed CADD-SV version with:
+
+```bash
+caddsv --version
+```
+
 Download the annotation bundle:
 
 ```bash
@@ -361,7 +367,20 @@ Main score columns:
 The output also keeps annotation and model feature columns for downstream
 inspection.
 
+Only files in `scored/` are formatted for final presentation. Coordinate-based
+files use `#chr` as their first header field, and every raw `*_score` value is
+written with exactly four decimal places. PHRED columns and the workflow-native
+files under `beds/` retain their original precision.
+
 ## Options
+
+### Global
+
+```bash
+caddsv --version
+```
+
+Print the version of the installed CADD-SV distribution.
 
 ### `caddsv get`
 
