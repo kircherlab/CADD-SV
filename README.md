@@ -1,5 +1,5 @@
 # CADD-SV
-[![Release](https://img.shields.io/badge/release-v2.0-green)](https://github.com/kircherlab/CADD-SV/releases/tag/v2.0)
+[![GitHub release](https://img.shields.io/github/v/release/kircherlab/CADD-SV)](https://github.com/kircherlab/CADD-SV/releases/latest)
 [![PyPI version](https://img.shields.io/pypi/v/caddsv.svg)](https://pypi.org/project/caddsv/)
 [![Bioconda version](https://img.shields.io/conda/vn/bioconda/caddsv.svg?style=flat)](https://bioconda.github.io/recipes/caddsv/README.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/kircherlab/CADD-SV/blob/main/LICENSE)
@@ -462,14 +462,6 @@ caddsv run sample.bed --config custom.yml
 ```
 
 The packaged default config is `caddsv/config.yml`.
-
-### Versioning a release
-
-The release version is set manually in `pyproject.toml`. Before each release,
-update that version, commit it, and create the matching Git tag (for example,
-`v2.0.1`). Build and upload the PyPI distribution from that commit, then update
-the Bioconda recipe to the same version. Creating a Git tag or publishing to
-PyPI/Bioconda does not update the other version records automatically.
 
 ## How to cite CADD-SV
 
