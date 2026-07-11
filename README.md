@@ -33,6 +33,12 @@ pip install caddsv
 Conda is the default workflow backend: running `caddsv run` without container
 options lets Snakemake create and reuse the required Conda environments.
 
+Check the installed CADD-SV version with:
+
+```bash
+caddsv --version
+```
+
 Download the annotation bundle:
 
 ```bash
@@ -361,7 +367,20 @@ Main score columns:
 The output also keeps annotation and model feature columns for downstream
 inspection.
 
+Only files in `scored/` are formatted for final presentation. Coordinate-based
+files use `#chr` as their first header field, and every raw `*_score` value is
+written with exactly four decimal places. PHRED columns and the workflow-native
+files under `beds/` retain their original precision.
+
 ## Options
+
+### Global
+
+```bash
+caddsv --version
+```
+
+Print the version of the installed CADD-SV distribution.
 
 ### `caddsv get`
 
@@ -443,6 +462,14 @@ caddsv run sample.bed --config custom.yml
 ```
 
 The packaged default config is `caddsv/config.yml`.
+
+### Versioning a release
+
+The release version is set manually in `pyproject.toml`. Before each release,
+update that version, commit it, and create the matching Git tag (for example,
+`v2.0.1`). Build and upload the PyPI distribution from that commit, then update
+the Bioconda recipe to the same version. Creating a Git tag or publishing to
+PyPI/Bioconda does not update the other version records automatically.
 
 ## How to cite CADD-SV
 
