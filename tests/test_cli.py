@@ -6,6 +6,7 @@ from importlib.metadata import version as package_version
 from pathlib import Path
 from unittest.mock import patch
 
+import typer
 from typer.testing import CliRunner
 
 from caddsv.cli import (
@@ -13,6 +14,7 @@ from caddsv.cli import (
     _build_snakemake_command,
     app,
     container_image_path,
+    parse_snakemake_args,
     write_final_score_file,
 )
 from caddsv.container_images import (
@@ -270,6 +272,7 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
         use_singularity=False,
         singularity_prefix=None,
         singularity_args=None,
+        extra_snakemake_args=None,
     ):
         return _build_snakemake_command(
             cfg=Path("config.yml"),
@@ -288,6 +291,7 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
             use_singularity=use_singularity,
             singularity_prefix=singularity_prefix,
             singularity_args=singularity_args,
+            extra_snakemake_args=extra_snakemake_args,
         )
 
     def test_conda_is_enabled_by_default(self):
@@ -334,6 +338,28 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
                 singularity_prefix=Path("/images"),
             )
 
+    def test_extra_snakemake_arguments_are_appended_last(self):
+        command = self.build_command(
+            extra_snakemake_args=["--cores", "8", "--profile", "/profiles/slurm"],
+        )
+
+        generated_cores = command.index("--cores")
+        self.assertEqual(command[generated_cores + 1], "4")
+        self.assertEqual(
+            command[-4:],
+            ["--cores", "8", "--profile", "/profiles/slurm"],
+        )
+
+    def test_extra_snakemake_arguments_support_shell_quoting(self):
+        self.assertEqual(
+            parse_snakemake_args('--config message="value with spaces"'),
+            ["--config", "message=value with spaces"],
+        )
+
+    def test_invalid_extra_snakemake_arguments_are_rejected(self):
+        with self.assertRaisesRegex(typer.BadParameter, "Invalid --snakemake-args"):
+            parse_snakemake_args('"unterminated')
+
 
 class RunCommandTests(unittest.TestCase):
     def test_no_use_conda_uses_parent_environment_without_creating_cache(self):
@@ -365,6 +391,8 @@ class RunCommandTests(unittest.TestCase):
                         "--output-dir",
                         str(results),
                         "--no-use-conda",
+                        "--snakemake-args",
+                        "--keep-going --latency-wait 60",
                     ],
                     env={"XDG_CACHE_HOME": str(cache_home)},
                 )
@@ -373,6 +401,7 @@ class RunCommandTests(unittest.TestCase):
             command = run_mock.call_args.args[0]
             self.assertNotIn("--use-conda", command)
             self.assertNotIn("--conda-prefix", command)
+            self.assertEqual(command[-3:], ["--keep-going", "--latency-wait", "60"])
             self.assertNotEqual(
                 run_mock.call_args.kwargs["env"].get("PYTHONNOUSERSITE"),
                 "1",
@@ -384,6 +413,15 @@ class RunCommandTests(unittest.TestCase):
                 "#chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score\n"
                 "chr1\t1\t2\tDEL\t12.345678\t0.1235\n",
             )
+
+    def test_run_rejects_invalid_snakemake_argument_quoting(self):
+        result = CliRunner().invoke(
+            app,
+            ["run", "sample", "--snakemake-args", '"unterminated'],
+        )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("Invalid --snakemake-args value", result.output)
 
     def test_sequence_only_mode_formats_final_scores_without_changing_header(self):
         runner = CliRunner()

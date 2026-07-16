@@ -391,6 +391,19 @@ def build_singularity_args(
     return " ".join(args)
 
 
+def parse_snakemake_args(value: Optional[str]) -> List[str]:
+    """Parse optional user-provided Snakemake arguments safely."""
+    if not value:
+        return []
+
+    try:
+        return shlex.split(value)
+    except ValueError as exc:
+        raise typer.BadParameter(
+            f"Invalid --snakemake-args value: {exc}"
+        ) from exc
+
+
 def resolve_scaler_dir(scaler_dir: Optional[Path]) -> Path:
     if scaler_dir is None:
         raise typer.BadParameter(
@@ -423,6 +436,7 @@ def _build_snakemake_command(
     use_singularity: bool = False,
     singularity_prefix: Optional[Path] = None,
     singularity_args: Optional[str] = None,
+    extra_snakemake_args: Optional[List[str]] = None,
 ) -> List[str]:
     if use_conda and use_singularity:
         raise ValueError("conda and singularity backends are mutually exclusive")
@@ -482,6 +496,8 @@ def _build_snakemake_command(
         cmd.append("--forceall")
     if unlock:
         cmd.append("--unlock")
+    if extra_snakemake_args:
+        cmd.extend(extra_snakemake_args)
     return cmd
 
 
@@ -642,6 +658,14 @@ def run(
         "--check-time",
         help="Track time and resource usage; log to a .log file.",
     ),
+    snakemake_args: Optional[str] = typer.Option(
+        None,
+        "--snakemake-args",
+        help=(
+            "Additional Snakemake arguments. Parsed with shell-style quoting "
+            "and appended last, so they can override CADD-SV options."
+        ),
+    ),
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
     annot_dir = str(Path(annotations_dir).resolve()) if annotations_dir else str(Path("annotations").resolve())
@@ -668,6 +692,8 @@ def run(
         raise typer.BadParameter(
             "--singularity-args requires --use-singularity."
         )
+
+    extra_snakemake_args = parse_snakemake_args(snakemake_args)
 
     # Override mode if sequence_only flag is set
     if sequence_only:
@@ -877,6 +903,7 @@ def run(
         use_singularity=use_singularity,
         singularity_prefix=resolved_singularity_prefix,
         singularity_args=resolved_singularity_args,
+        extra_snakemake_args=extra_snakemake_args,
     )
 
     typer.echo("Running:\n  " + " ".join(cmd))

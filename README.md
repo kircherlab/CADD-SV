@@ -416,6 +416,7 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 | `--use-singularity` / `--use-apptainer` | Run rules in their versioned OCI/SIF containers. |
 | `--singularity-prefix PATH` / `--apptainer-prefix PATH` | Singularity/Apptainer image cache directory. |
 | `--singularity-args TEXT` / `--apptainer-args TEXT` | Extra runtime arguments, such as `--nv` for GPUs. |
+| `--snakemake-args TEXT` | Extra Snakemake arguments; appended last and may override CADD-SV settings. |
 | `--config`, `-c PATH` | Alternate Snakemake YAML configuration. |
 | `--seqresolved` | Add SegmentNT-derived features to coordinate-based scoring. |
 | `--seqonly` | Run sequence-only scoring from REF/ALT TSV input. |
@@ -424,6 +425,17 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 | `--check-time` | Write a small resource summary log. |
 
 ## Runtime Notes
+
+Advanced Snakemake options can be passed through with shell-style quoting:
+
+```bash
+caddsv run sample.bed \
+  --snakemake-args="--profile profiles/slurm --keep-going --latency-wait 60"
+```
+
+These arguments are appended after CADD-SV's generated Snakemake command. They
+can therefore override options such as `--cores`, `--config`, or the deployment
+backend; use this only when intentionally changing CADD-SV's default behavior.
 
 - First runs are slower because Snakemake creates or pulls software environments;
   use `caddsv get envs` before parallel containerized runs.
