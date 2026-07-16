@@ -6,13 +6,18 @@ from importlib.metadata import version as package_version
 from pathlib import Path
 from unittest.mock import patch
 
+import typer
 from typer.testing import CliRunner
 
 from caddsv.cli import (
+    CONDA_ENVS_SNAKEFILE,
     DEFAULT_CONFIG,
     _build_snakemake_command,
     app,
+    build_conda_envs_command,
     container_image_path,
+    parse_snakemake_args,
+    split_snakemake_config_args,
     write_final_score_file,
 )
 from caddsv.container_images import (
@@ -261,6 +266,148 @@ class GetEnvironmentImagesTests(unittest.TestCase):
         self.assertIn("Singularity.", result.output)
 
 
+class GetCondaEnvironmentsTests(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+
+    def test_get_envs_creates_all_conda_environments_at_explicit_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "conda"
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "get",
+                        "envs",
+                        "--use-conda",
+                        "--conda-prefix",
+                        str(prefix),
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertTrue(prefix.is_dir())
+            run_mock.assert_called_once()
+            command = run_mock.call_args.args[0]
+            self.assertTrue(run_mock.call_args.kwargs["check"])
+            self.assertEqual(command[:3], [sys.executable, "-m", "snakemake"])
+            self.assertEqual(
+                command[command.index("--snakefile") + 1],
+                str(CONDA_ENVS_SNAKEFILE),
+            )
+            self.assertEqual(
+                command[command.index("--conda-prefix") + 1],
+                str(prefix.resolve()),
+            )
+            self.assertIn("--conda-create-envs-only", command)
+            self.assertEqual(command[-1], "all_envs")
+
+    def test_coordinate_based_conda_prefetch_uses_environment_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "conda"
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--use-conda", "--coordinate-based-only"],
+                    env={"CADD_SV_CONDA_PREFIX": str(prefix)},
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            command = run_mock.call_args.args[0]
+            self.assertEqual(
+                command[command.index("--conda-prefix") + 1],
+                str(prefix.resolve()),
+            )
+            self.assertEqual(command[-1], "coordinate_based_envs")
+
+    def test_conda_prefetch_uses_default_cache_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_home = Path(tmpdir) / "cache"
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--use-conda"],
+                    env={
+                        "CADD_SV_CONDA_PREFIX": "",
+                        "XDG_CACHE_HOME": str(cache_home),
+                    },
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            command = run_mock.call_args.args[0]
+            expected = (cache_home / "caddsv" / "snakemake-conda").resolve()
+            self.assertEqual(
+                command[command.index("--conda-prefix") + 1],
+                str(expected),
+            )
+
+    def test_conda_and_image_options_cannot_be_combined(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.runner.invoke(
+                app,
+                [
+                    "get",
+                    "envs",
+                    "--use-conda",
+                    "--apptainer-prefix",
+                    tmpdir,
+                ],
+            )
+            self.assertEqual(result.exit_code, 2, result.output)
+            self.assertIn("cannot be used with", result.output)
+            self.assertIn("--use-conda", result.output)
+
+            result = self.runner.invoke(
+                app,
+                ["get", "envs", "--use-conda", "--force-envs"],
+            )
+            self.assertEqual(result.exit_code, 2, result.output)
+            self.assertIn("only applies to environment images", result.output)
+
+    def test_conda_prefix_requires_conda_backend(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.runner.invoke(
+                app,
+                ["get", "envs", "--conda-prefix", tmpdir],
+            )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("--conda-prefix requires --use-conda", result.output)
+
+    def test_conda_creation_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            error = subprocess.CalledProcessError(1, ["snakemake"])
+            with patch("caddsv.cli.subprocess.run", side_effect=error):
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "get",
+                        "envs",
+                        "--use-conda",
+                        "--conda-prefix",
+                        tmpdir,
+                    ],
+                )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("Failed to create Conda environments", result.output)
+
+    def test_bootstrap_workflow_references_only_active_environment_files(self):
+        workflow = CONDA_ENVS_SNAKEFILE.read_text()
+        for filename in ("preprocessing.yml", "SV.yml", "NT.yml", "training.yml"):
+            self.assertIn(f'"envs/{filename}"', workflow)
+        self.assertNotIn("prepBED.yml", workflow)
+
+    def test_conda_command_builder_selects_requested_target(self):
+        command = build_conda_envs_command(
+            Path("/conda"),
+            Path("/work"),
+            coordinate_based_only=True,
+        )
+
+        self.assertEqual(command[-1], "coordinate_based_envs")
+
+
 class BuildSnakemakeCommandTests(unittest.TestCase):
     def build_command(
         self,
@@ -270,6 +417,7 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
         use_singularity=False,
         singularity_prefix=None,
         singularity_args=None,
+        extra_snakemake_args=None,
     ):
         return _build_snakemake_command(
             cfg=Path("config.yml"),
@@ -288,6 +436,7 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
             use_singularity=use_singularity,
             singularity_prefix=singularity_prefix,
             singularity_args=singularity_args,
+            extra_snakemake_args=extra_snakemake_args,
         )
 
     def test_conda_is_enabled_by_default(self):
@@ -334,8 +483,202 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
                 singularity_prefix=Path("/images"),
             )
 
+    def test_extra_snakemake_arguments_are_appended_last(self):
+        command = self.build_command(
+            extra_snakemake_args=["--cores", "8", "--profile", "/profiles/slurm"],
+        )
+
+        generated_cores = command.index("--cores")
+        self.assertEqual(command[generated_cores + 1], "4")
+        self.assertEqual(
+            command[-4:],
+            ["--cores", "8", "--profile", "/profiles/slurm"],
+        )
+
+    def test_extra_snakemake_arguments_support_shell_quoting(self):
+        self.assertEqual(
+            parse_snakemake_args('--config message="value with spaces"'),
+            ["--config", "message=value with spaces"],
+        )
+
+    def test_extra_config_values_are_merged_into_generated_config(self):
+        command = self.build_command(
+            extra_snakemake_args=[
+                "--config",
+                "mode=training",
+                "custom=value",
+                "--keep-going",
+            ],
+        )
+
+        self.assertEqual(command.count("--config"), 1)
+        self.assertIn("dataset=sample", command)
+        self.assertLess(
+            command.index("mode=scoring"),
+            command.index("mode=training"),
+        )
+        self.assertIn("custom=value", command)
+        self.assertEqual(command[-1], "--keep-going")
+
+    def test_config_extraction_supports_equals_form(self):
+        config, remaining = split_snakemake_config_args(
+            ["--config=message=value with spaces", "--printshellcmds"]
+        )
+
+        self.assertEqual(config, ["message=value with spaces"])
+        self.assertEqual(remaining, ["--printshellcmds"])
+
+    def test_config_extraction_supports_attached_short_form(self):
+        config, remaining = split_snakemake_config_args(
+            ["-Cmode=training", "--keep-going"]
+        )
+
+        self.assertEqual(config, ["mode=training"])
+        self.assertEqual(remaining, ["--keep-going"])
+
+    def test_config_extraction_respects_option_terminator(self):
+        config, remaining = split_snakemake_config_args(
+            ["--", "--config", "literal-target"]
+        )
+
+        self.assertEqual(config, [])
+        self.assertEqual(remaining, ["--", "--config", "literal-target"])
+
+    def test_invalid_extra_snakemake_arguments_are_rejected(self):
+        with self.assertRaisesRegex(typer.BadParameter, "Invalid --snakemake-args"):
+            parse_snakemake_args('"unterminated')
+
 
 class RunCommandTests(unittest.TestCase):
+    def prepare_existing_dataset(self, root, with_workflow_output=False):
+        results = root / "results"
+        input_dir = results / "input"
+        input_dir.mkdir(parents=True)
+        (input_dir / "id_sample.bed").write_text("chr1\t1\t2\tDEL\n")
+        if with_workflow_output:
+            workflow_output = results / "beds" / "sample" / "output"
+            workflow_output.mkdir(parents=True)
+            (workflow_output / "samplebed_score100.bed").write_text(
+                "chr\tstart\tend\ttype\tCADD-SV_score\n"
+                "chr1\t1\t2\tDEL\t0.1000\n"
+            )
+        return results
+
+    def test_first_class_dry_run_does_not_publish_stale_scores(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(
+                Path(tmpdir),
+                with_workflow_output=True,
+            )
+            scored = results / "scored"
+            scored.mkdir()
+            destination = scored / "sample_score.tsv"
+            destination.write_text("existing score\n")
+
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--dry-run",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("--dry-run", run_mock.call_args.args[0])
+            self.assertEqual(destination.read_text(), "existing score\n")
+            self.assertIn("without CADD-SV score post-processing", result.output)
+
+    def test_passthrough_dry_run_warns_and_skips_postprocessing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(Path(tmpdir))
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args=--dry-run",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("--dry-run", run_mock.call_args.args[0])
+            self.assertIn("change Snakemake execution", result.output)
+            self.assertFalse((results / "scored" / "sample_score.tsv").exists())
+
+    def test_destructive_passthrough_warns_and_skips_postprocessing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(Path(tmpdir))
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args=--delete-temp-output",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("--delete-temp-output", run_mock.call_args.args[0])
+            self.assertIn("can remove workflow files", result.output)
+
+    def test_managed_and_dag_options_warn_but_are_forwarded(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(
+                Path(tmpdir),
+                with_workflow_output=True,
+            )
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args=--cores 8 --until score",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            command = run_mock.call_args.args[0]
+            self.assertEqual(command[-4:], ["--cores", "8", "--until", "score"])
+            self.assertIn("overlap options managed by CADD-SV", result.output)
+            self.assertIn("change the selected DAG", result.output)
+
+    def test_rendered_command_quotes_passthrough_values_with_spaces(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(Path(tmpdir))
+            with patch("caddsv.cli.subprocess.run"):
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args",
+                        '--report "reports/CADD SV.html"',
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("'reports/CADD SV.html'", result.output)
+
     def test_no_use_conda_uses_parent_environment_without_creating_cache(self):
         runner = CliRunner()
 
@@ -365,6 +708,8 @@ class RunCommandTests(unittest.TestCase):
                         "--output-dir",
                         str(results),
                         "--no-use-conda",
+                        "--snakemake-args",
+                        "--keep-going --latency-wait 60",
                     ],
                     env={"XDG_CACHE_HOME": str(cache_home)},
                 )
@@ -373,6 +718,7 @@ class RunCommandTests(unittest.TestCase):
             command = run_mock.call_args.args[0]
             self.assertNotIn("--use-conda", command)
             self.assertNotIn("--conda-prefix", command)
+            self.assertEqual(command[-3:], ["--keep-going", "--latency-wait", "60"])
             self.assertNotEqual(
                 run_mock.call_args.kwargs["env"].get("PYTHONNOUSERSITE"),
                 "1",
@@ -384,6 +730,15 @@ class RunCommandTests(unittest.TestCase):
                 "#chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score\n"
                 "chr1\t1\t2\tDEL\t12.345678\t0.1235\n",
             )
+
+    def test_run_rejects_invalid_snakemake_argument_quoting(self):
+        result = CliRunner().invoke(
+            app,
+            ["run", "sample", "--snakemake-args", '"unterminated'],
+        )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("Invalid --snakemake-args value", result.output)
 
     def test_sequence_only_mode_formats_final_scores_without_changing_header(self):
         runner = CliRunner()

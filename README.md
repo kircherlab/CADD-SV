@@ -81,6 +81,14 @@ package includes the CLI and workflow files. By default, full scoring also uses
 Conda at runtime so Snakemake can create isolated environments for the workflow
 rules.
 
+Note that the runtime and prefetch defaults are different:
+
+- `caddsv run` uses Conda by default.
+- `caddsv get envs` downloads Apptainer/Singularity images by default for
+  backward compatibility.
+- Use `caddsv get envs --use-conda` when you want to create the Conda
+  environments ahead of a normal, Conda-backed run.
+
 By default, those environments are cached under:
 
 ```text
@@ -91,8 +99,20 @@ Use `--conda-prefix` or `CADD_SV_CONDA_PREFIX` to place them on scratch or
 shared storage:
 
 ```bash
+# Prefetch the Conda environments. Without --use-conda, this command fetches
+# Apptainer/Singularity images instead.
+caddsv get envs --use-conda \
+  --conda-prefix /scratch/$USER/caddsv-conda
+
+# Reuse the prefetched Conda environments during scoring.
 caddsv run sample.bed --conda-prefix /scratch/$USER/caddsv-conda
 ```
+
+The `get envs` command asks Snakemake to create all workflow Conda
+environments without requiring an input file or running workflow jobs. A later
+`caddsv run` reuses them when given the same prefix. Add
+`--coordinate-based-only` to omit the NT environment. Conda must be available
+on `PATH` while the environments are created.
 
 For a container or another pre-provisioned environment, disable Snakemake's
 per-rule conda environments:
@@ -130,10 +150,11 @@ caddsv run sample.bed \
 ```
 
 Images are cached in `${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-singularity`
-by default. `caddsv get envs` downloads all four images before execution, which
-avoids simultaneous first-time pulls when multiple runs start in parallel. For
-coordinate-only scoring, `--coordinate-based-only` omits the unused NT image.
-Existing images are reused unless `--force-envs` is supplied.
+by default. In its default image mode, `caddsv get envs` downloads all four
+images before execution, which avoids simultaneous first-time pulls when
+multiple runs start in parallel. For coordinate-only scoring,
+`--coordinate-based-only` omits the unused NT image. Existing images are reused
+unless `--force-envs` is supplied.
 
 Apptainer or Singularity must be installed on every execution host. The
 `--use-apptainer` and `--use-singularity` flags are equivalent; use the former
@@ -387,7 +408,8 @@ Print the version of the installed CADD-SV distribution.
 ```bash
 caddsv get annotations [--annotations-dir PATH] [--with-segmentnt] [--force-segmentnt]
 caddsv get segmentnt   [--annotations-dir PATH] [--force-segmentnt] [--segmentnt-repo REPO]
-caddsv get envs        [--apptainer-prefix PATH] [--coordinate-based-only] [--force-envs]
+caddsv get envs --use-conda [--conda-prefix PATH] [--coordinate-based-only]
+caddsv get envs [--apptainer-prefix PATH] [--coordinate-based-only] [--force-envs]
 ```
 
 | Option | Meaning |
@@ -396,9 +418,11 @@ caddsv get envs        [--apptainer-prefix PATH] [--coordinate-based-only] [--fo
 | `--with-segmentnt` | Also download SegmentNT into `<annotations-dir>/segment_nt`. |
 | `--force-segmentnt` | Replace an existing local SegmentNT directory. |
 | `--segmentnt-repo REPO` | Hugging Face SegmentNT repository. Default: `InstaDeepAI/segment_nt`. |
+| `--use-conda` | Create the workflow Conda environments instead of downloading environment images. |
+| `--conda-prefix PATH` | Snakemake Conda environment directory; requires `--use-conda`. |
 | `--apptainer-prefix PATH` / `--singularity-prefix PATH` | Environment image directory; uses the same default and overrides as `caddsv run`. |
-| `--coordinate-based-only` | Prefetch preprocessing, SV, and training images without NT. |
-| `--force-envs` | Re-download environment images already present. |
+| `--coordinate-based-only` | Prefetch preprocessing, SV, and training environments without NT. |
+| `--force-envs` | Re-download environment images already present; image backend only. |
 
 ### `caddsv run`
 
@@ -416,17 +440,61 @@ caddsv run INPUT [INPUT ...] [OPTIONS]
 | `--use-singularity` / `--use-apptainer` | Run rules in their versioned OCI/SIF containers. |
 | `--singularity-prefix PATH` / `--apptainer-prefix PATH` | Singularity/Apptainer image cache directory. |
 | `--singularity-args TEXT` / `--apptainer-args TEXT` | Extra runtime arguments, such as `--nv` for GPUs. |
+| `--snakemake-args TEXT` | Extra Snakemake arguments; appended last and may override CADD-SV settings. |
 | `--config`, `-c PATH` | Alternate Snakemake YAML configuration. |
 | `--seqresolved` | Add SegmentNT-derived features to coordinate-based scoring. |
 | `--seqonly` | Run sequence-only scoring from REF/ALT TSV input. |
 | `--force` | Pass `--forceall` to Snakemake. |
 | `--unlock` | Unlock a locked Snakemake output directory. |
+| `--dry-run` | Display the Snakemake execution plan without running jobs or publishing scores. |
 | `--check-time` | Write a small resource summary log. |
 
 ## Runtime Notes
 
+`caddsv run` exposes the commonly used workflow options directly. Additional
+Snakemake options can be supplied as one quoted string with `--snakemake-args`:
+
+```bash
+caddsv run sample.bed \
+  --snakemake-args="--keep-going --latency-wait 60"
+
+caddsv run sample.bed \
+  --snakemake-args="--profile profiles/slurm --printshellcmds"
+```
+
+The value is split using shell-style quoting, so options containing spaces can
+be nested inside the outer quotes, for example
+`--snakemake-args='--report "reports/CADD SV.html"'`. The arguments are passed
+directly to Snakemake without being executed by a shell.
+
+Forwarded arguments are appended after the command generated by CADD-SV. This
+allows advanced users to override some generated options, but Snakemake does
+not handle every repeated option in the same way. CADD-SV warns when forwarded
+arguments overlap its managed settings, change the selected DAG or output
+handling, select a deployment backend, or request destructive cleanup. The
+arguments are still forwarded so expert use cases remain possible.
+
+Additional Snakemake `--config KEY=VALUE` entries are merged into CADD-SV's
+generated config, with the forwarded values applied last. Prefer CADD-SV's
+direct options such as `--threads`, `--config`, `--use-apptainer`, and
+`--conda-prefix` where equivalents exist. `--snakemake-args` is available only
+on `caddsv run`.
+
+Use CADD-SV's first-class dry-run option to inspect the execution plan safely:
+
+```bash
+caddsv run sample.bed --dry-run
+```
+
+Dry runs stage the input and create the results directory needed to construct
+the DAG, but they do not execute Snakemake jobs or publish score files. Known
+Snakemake inspection and early-exit modes passed through `--snakemake-args`
+also skip CADD-SV score post-processing so stale workflow files are not
+republished as new results.
+
 - First runs are slower because Snakemake creates or pulls software environments;
-  use `caddsv get envs` before parallel containerized runs.
+  prefetch with `caddsv get envs --use-conda` for Conda runs or
+  `caddsv get envs` for containerized runs.
 - In containerized runs, use `--no-use-conda` for a prebuilt parent environment
   or `--use-apptainer` for per-rule images.
 - Use the same `--output-dir` to resume or reuse work from an interrupted run.

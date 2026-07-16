@@ -54,6 +54,7 @@ PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
 MODELS_DIR = WORKFLOW_DIR / "models"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+CONDA_ENVS_SNAKEFILE = WORKFLOW_DIR / "create_envs.smk"
 CONDA_PREFIX_ENV_VAR = "CADD_SV_CONDA_PREFIX"
 CONDA_CACHE_SUBDIR = Path("caddsv") / "snakemake-conda"
 SINGULARITY_PREFIX_ENV_VARS = (
@@ -89,6 +90,80 @@ redistribution are subject to the upstream SegmentNT license.
 
 _RAW_SCORE_SUFFIX = "_score"
 _SCORE_PRECISION = Decimal("0.0001")
+
+_SNAKEMAKE_MANAGED_OPTIONS = {
+    "--snakefile",
+    "-s",
+    "--directory",
+    "-d",
+    "--cores",
+    "-c",
+    "--jobs",
+    "-j",
+    "--config",
+    "-C",
+    "--configfile",
+    "--configfiles",
+    "--forceall",
+    "-F",
+    "--unlock",
+    "--rerun-incomplete",
+    "--use-conda",
+    "--conda-prefix",
+    "--conda-frontend",
+    "--use-singularity",
+    "--use-apptainer",
+    "--singularity-prefix",
+    "--apptainer-prefix",
+    "--singularity-args",
+    "--apptainer-args",
+}
+_SNAKEMAKE_INSPECTION_OPTIONS = {
+    "--dry-run",
+    "--dryrun",
+    "-n",
+    "--unlock",
+    "--dag",
+    "--rulegraph",
+    "--filegraph",
+    "--d3dag",
+    "--summary",
+    "--detailed-summary",
+    "--lint",
+    "--list-conda-envs",
+    "--list-rules",
+    "--list-resources",
+    "--list-params-changes",
+    "--list-input-changes",
+    "--list-version-changes",
+    "--list-code-changes",
+    "--list-untracked",
+    "--print-compilation",
+    "--report",
+    "--archive",
+    "--containerize",
+    "--generate-unit-tests",
+}
+_SNAKEMAKE_DESTRUCTIVE_OPTIONS = {
+    "--delete-all-output",
+    "--delete-temp-output",
+    "--cleanup-metadata",
+    "--conda-cleanup-envs",
+    "--container-cleanup-images",
+}
+_SNAKEMAKE_DAG_OR_OUTPUT_OPTIONS = {
+    "--until",
+    "--omit-from",
+    "--allowed-rules",
+    "--target-jobs",
+    "--batch",
+    "--forcerun",
+    "--force",
+    "--prioritize",
+    "--touch",
+    "--notemp",
+    "--all-temp",
+}
 
 
 def _format_raw_score(value: str) -> str:
@@ -367,6 +442,57 @@ def download_container_images(
     typer.echo(f"Environment images are available at: {target}")
 
 
+def build_conda_envs_command(
+    target: Path,
+    workdir: Path,
+    coordinate_based_only: bool = False,
+) -> List[str]:
+    workflow_target = (
+        "coordinate_based_envs" if coordinate_based_only else "all_envs"
+    )
+    return [
+        sys.executable,
+        "-m",
+        "snakemake",
+        "--snakefile",
+        str(CONDA_ENVS_SNAKEFILE),
+        "--directory",
+        str(workdir),
+        "--cores",
+        "1",
+        "--use-conda",
+        "--conda-prefix",
+        str(target),
+        "--conda-frontend",
+        "conda",
+        "--conda-create-envs-only",
+        workflow_target,
+    ]
+
+
+def create_conda_environments(
+    target: Path,
+    coordinate_based_only: bool = False,
+) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    typer.echo(f"Creating Conda environments in: {target}")
+
+    with tempfile.TemporaryDirectory(prefix="caddsv-conda-envs-") as workdir:
+        command = build_conda_envs_command(
+            target,
+            Path(workdir),
+            coordinate_based_only=coordinate_based_only,
+        )
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError as exc:
+            raise typer.BadParameter(
+                f"Failed to create Conda environments in {target}."
+            ) from exc
+
+    typer.echo(f"Conda environments are available at: {target}")
+
+
 def build_singularity_args(
     annot_dir: str,
     segmentnt_model_dir: str,
@@ -389,6 +515,105 @@ def build_singularity_args(
         args.append(user_args)
 
     return " ".join(args)
+
+
+def parse_snakemake_args(value: Optional[str]) -> List[str]:
+    """Parse optional user-provided Snakemake arguments safely."""
+    if not value:
+        return []
+
+    try:
+        return shlex.split(value)
+    except ValueError as exc:
+        raise typer.BadParameter(
+            f"Invalid --snakemake-args value: {exc}"
+        ) from exc
+
+
+def snakemake_option_names(arguments: List[str]) -> set[str]:
+    """Return option names without exposing their potentially sensitive values."""
+    names = set()
+    for argument in arguments:
+        if argument == "--":
+            break
+        if argument.startswith("--"):
+            names.add(argument.split("=", 1)[0])
+        elif argument.startswith("-C") and len(argument) > 2:
+            names.add("-C")
+        elif argument in {"-s", "-d", "-c", "-j", "-C", "-F", "-n"}:
+            names.add(argument)
+    return names
+
+
+def warn_snakemake_arg_conflicts(arguments: List[str]) -> set[str]:
+    """Warn about pass-through options that can change CADD-SV semantics."""
+    option_names = snakemake_option_names(arguments)
+    warning_groups = (
+        (
+            option_names & _SNAKEMAKE_MANAGED_OPTIONS,
+            "override or overlap options managed by CADD-SV",
+        ),
+        (
+            option_names & _SNAKEMAKE_INSPECTION_OPTIONS,
+            "change Snakemake execution or inspection behavior",
+        ),
+        (
+            option_names & _SNAKEMAKE_DESTRUCTIVE_OPTIONS,
+            "can remove workflow files or cached environments",
+        ),
+        (
+            option_names & _SNAKEMAKE_DAG_OR_OUTPUT_OPTIONS,
+            "change the selected DAG or output handling",
+        ),
+    )
+    warnings = []
+    warned_options = set()
+    for options, description in warning_groups:
+        new_options = options - warned_options
+        if new_options:
+            warnings.append(
+                f"{', '.join(sorted(new_options))} {description}"
+            )
+            warned_options.update(new_options)
+    if warnings:
+        typer.echo(
+            "Warning: --snakemake-args option(s) " + "; ".join(warnings) + ".",
+            err=True,
+        )
+    return option_names
+
+
+def split_snakemake_config_args(
+    arguments: List[str],
+) -> tuple[List[str], List[str]]:
+    """Extract repeated --config values so Snakemake sees one occurrence."""
+    config_values: List[str] = []
+    remaining: List[str] = []
+    index = 0
+
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "--":
+            remaining.extend(arguments[index:])
+            break
+        if argument in {"--config", "-C"}:
+            index += 1
+            while index < len(arguments) and not arguments[index].startswith("-"):
+                config_values.append(arguments[index])
+                index += 1
+            continue
+        if argument.startswith("--config="):
+            config_values.append(argument.split("=", 1)[1])
+            index += 1
+            continue
+        if argument.startswith("-C") and len(argument) > 2:
+            config_values.append(argument[2:])
+            index += 1
+            continue
+        remaining.append(argument)
+        index += 1
+
+    return config_values, remaining
 
 
 def resolve_scaler_dir(scaler_dir: Optional[Path]) -> Path:
@@ -419,10 +644,12 @@ def _build_snakemake_command(
     segmentnt_model_dir: str,
     force: bool,
     unlock: bool,
+    dry_run: bool = False,
     use_conda: bool = True,
     use_singularity: bool = False,
     singularity_prefix: Optional[Path] = None,
     singularity_args: Optional[str] = None,
+    extra_snakemake_args: Optional[List[str]] = None,
 ) -> List[str]:
     if use_conda and use_singularity:
         raise ValueError("conda and singularity backends are mutually exclusive")
@@ -467,6 +694,9 @@ def _build_snakemake_command(
         )
         if singularity_args:
             cmd.extend(["--singularity-args", singularity_args])
+    config_overrides, remaining_snakemake_args = split_snakemake_config_args(
+        extra_snakemake_args or []
+    )
     cmd.extend(
         [
             "--config",
@@ -476,12 +706,17 @@ def _build_snakemake_command(
             f"all_scores={'True' if all_scores else 'False'}",
             f"annotations_dir={annot_dir}",
             f"segmentnt_model_dir={segmentnt_model_dir}",
+            *config_overrides,
         ]
     )
     if force:
         cmd.append("--forceall")
     if unlock:
         cmd.append("--unlock")
+    if dry_run:
+        cmd.append("--dry-run")
+    if remaining_snakemake_args:
+        cmd.extend(remaining_snakemake_args)
     return cmd
 
 
@@ -516,15 +751,28 @@ def get(
                 "(default: the CADD-SV Singularity/Apptainer cache)."
             ),
         ),
+        conda_prefix: Optional[Path] = typer.Option(
+            None,
+            "--conda-prefix",
+            help=(
+                "Directory for prefetched Snakemake Conda environments "
+                "(default: CADD_SV_CONDA_PREFIX or user cache)."
+            ),
+        ),
+        use_conda: bool = typer.Option(
+            False,
+            "--use-conda",
+            help="Create Conda environments instead of downloading images.",
+        ),
         coordinate_based_only: bool = typer.Option(
             False,
             "--coordinate-based-only",
-            help="Download preprocessing, SV, and training images, but not NT.",
+            help="Prepare preprocessing, SV, and training environments, but not NT.",
         ),
         force_envs: bool = typer.Option(
             False,
             "--force-envs",
-            help="Replace environment images already present in the cache.",
+            help="Replace environment images already present in the image cache.",
         ),
 ):
 
@@ -540,12 +788,34 @@ def get(
         download_segmentnt(target / SEGMENTNT_DIRNAME, segmentnt_repo, force_segmentnt)
         typer.echo("DONE")
     elif flag == "envs":
-        image_target = resolve_singularity_prefix(singularity_prefix)
-        download_container_images(
-            image_target,
-            coordinate_based_only=coordinate_based_only,
-            force=force_envs,
-        )
+        if use_conda:
+            if singularity_prefix is not None:
+                raise typer.BadParameter(
+                    "--singularity-prefix/--apptainer-prefix cannot be used "
+                    "with --use-conda."
+                )
+            if force_envs:
+                raise typer.BadParameter(
+                    "--force-envs only applies to environment images. Conda "
+                    "environments are recreated automatically when their YAML "
+                    "definitions change."
+                )
+            conda_target = resolve_conda_prefix(conda_prefix)
+            create_conda_environments(
+                conda_target,
+                coordinate_based_only=coordinate_based_only,
+            )
+        else:
+            if conda_prefix is not None:
+                raise typer.BadParameter(
+                    "--conda-prefix requires --use-conda."
+                )
+            image_target = resolve_singularity_prefix(singularity_prefix)
+            download_container_images(
+                image_target,
+                coordinate_based_only=coordinate_based_only,
+                force=force_envs,
+            )
         typer.echo("DONE")
     else:
         raise typer.BadParameter("Expected 'annotations', 'segmentnt', or 'envs'.")
@@ -585,6 +855,14 @@ def run(
     ),
     unlock: bool = typer.Option(
         False, "--unlock", help="snakemake --unlock"
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help=(
+            "Build and display the Snakemake execution plan without running "
+            "jobs or publishing score files."
+        ),
     ),
     annotations_dir: Optional[Path] = typer.Option(
         None, "--annotations-dir",
@@ -642,6 +920,14 @@ def run(
         "--check-time",
         help="Track time and resource usage; log to a .log file.",
     ),
+    snakemake_args: Optional[str] = typer.Option(
+        None,
+        "--snakemake-args",
+        help=(
+            "Additional Snakemake arguments. Parsed with shell-style quoting "
+            "and appended last, so they can override CADD-SV options."
+        ),
+    ),
 ):
     cfg = config if config is not None else DEFAULT_CONFIG
     annot_dir = str(Path(annotations_dir).resolve()) if annotations_dir else str(Path("annotations").resolve())
@@ -668,6 +954,11 @@ def run(
         raise typer.BadParameter(
             "--singularity-args requires --use-singularity."
         )
+
+    extra_snakemake_args = parse_snakemake_args(snakemake_args)
+    extra_snakemake_options = warn_snakemake_arg_conflicts(
+        extra_snakemake_args
+    )
 
     # Override mode if sequence_only flag is set
     if sequence_only:
@@ -873,13 +1164,16 @@ def run(
         segmentnt_model_dir=segmentnt_model_dir,
         force=force,
         unlock=unlock,
+        dry_run=dry_run,
         use_conda=use_conda,
         use_singularity=use_singularity,
         singularity_prefix=resolved_singularity_prefix,
         singularity_args=resolved_singularity_args,
+        extra_snakemake_args=extra_snakemake_args,
     )
 
-    typer.echo("Running:\n  " + " ".join(cmd))
+    rendered_command = shlex.join(cmd)
+    typer.echo("Running:\n  " + rendered_command)
 
     env = os.environ.copy()
 
@@ -902,7 +1196,7 @@ def run(
 
         log_lines = [
             f"[{started_at}] CADD-SV resource summary",
-            f"Command: {' '.join(cmd)}",
+            f"Command: {rendered_command}",
             f"Return code: {result.returncode}",
             f"Wall time: {format_seconds(wall_time)}",
             f"CPU time: {format_seconds(cpu_time)} (user: {format_seconds(user_time)}, sys: {format_seconds(sys_time)})",
@@ -921,6 +1215,23 @@ def run(
             raise typer.Exit(code=result.returncode)
     else:
         subprocess.run(cmd, check=True, env=env)
+
+    skip_postprocessing = (
+        dry_run
+        or unlock
+        or bool(
+            extra_snakemake_options
+            & (
+                _SNAKEMAKE_INSPECTION_OPTIONS
+                | _SNAKEMAKE_DESTRUCTIVE_OPTIONS
+            )
+        )
+    )
+    if skip_postprocessing:
+        typer.echo(
+            "Snakemake completed without CADD-SV score post-processing."
+        )
+        return
 
     # Handle output based on mode
     if sequence_only:
