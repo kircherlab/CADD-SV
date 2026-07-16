@@ -17,6 +17,7 @@ from caddsv.cli import (
     build_conda_envs_command,
     container_image_path,
     parse_snakemake_args,
+    split_snakemake_config_args,
     write_final_score_file,
 )
 from caddsv.container_images import (
@@ -500,12 +501,184 @@ class BuildSnakemakeCommandTests(unittest.TestCase):
             ["--config", "message=value with spaces"],
         )
 
+    def test_extra_config_values_are_merged_into_generated_config(self):
+        command = self.build_command(
+            extra_snakemake_args=[
+                "--config",
+                "mode=training",
+                "custom=value",
+                "--keep-going",
+            ],
+        )
+
+        self.assertEqual(command.count("--config"), 1)
+        self.assertIn("dataset=sample", command)
+        self.assertLess(
+            command.index("mode=scoring"),
+            command.index("mode=training"),
+        )
+        self.assertIn("custom=value", command)
+        self.assertEqual(command[-1], "--keep-going")
+
+    def test_config_extraction_supports_equals_form(self):
+        config, remaining = split_snakemake_config_args(
+            ["--config=message=value with spaces", "--printshellcmds"]
+        )
+
+        self.assertEqual(config, ["message=value with spaces"])
+        self.assertEqual(remaining, ["--printshellcmds"])
+
+    def test_config_extraction_supports_attached_short_form(self):
+        config, remaining = split_snakemake_config_args(
+            ["-Cmode=training", "--keep-going"]
+        )
+
+        self.assertEqual(config, ["mode=training"])
+        self.assertEqual(remaining, ["--keep-going"])
+
+    def test_config_extraction_respects_option_terminator(self):
+        config, remaining = split_snakemake_config_args(
+            ["--", "--config", "literal-target"]
+        )
+
+        self.assertEqual(config, [])
+        self.assertEqual(remaining, ["--", "--config", "literal-target"])
+
     def test_invalid_extra_snakemake_arguments_are_rejected(self):
         with self.assertRaisesRegex(typer.BadParameter, "Invalid --snakemake-args"):
             parse_snakemake_args('"unterminated')
 
 
 class RunCommandTests(unittest.TestCase):
+    def prepare_existing_dataset(self, root, with_workflow_output=False):
+        results = root / "results"
+        input_dir = results / "input"
+        input_dir.mkdir(parents=True)
+        (input_dir / "id_sample.bed").write_text("chr1\t1\t2\tDEL\n")
+        if with_workflow_output:
+            workflow_output = results / "beds" / "sample" / "output"
+            workflow_output.mkdir(parents=True)
+            (workflow_output / "samplebed_score100.bed").write_text(
+                "chr\tstart\tend\ttype\tCADD-SV_score\n"
+                "chr1\t1\t2\tDEL\t0.1000\n"
+            )
+        return results
+
+    def test_first_class_dry_run_does_not_publish_stale_scores(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(
+                Path(tmpdir),
+                with_workflow_output=True,
+            )
+            scored = results / "scored"
+            scored.mkdir()
+            destination = scored / "sample_score.tsv"
+            destination.write_text("existing score\n")
+
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--dry-run",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("--dry-run", run_mock.call_args.args[0])
+            self.assertEqual(destination.read_text(), "existing score\n")
+            self.assertIn("without CADD-SV score post-processing", result.output)
+
+    def test_passthrough_dry_run_warns_and_skips_postprocessing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(Path(tmpdir))
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args=--dry-run",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("--dry-run", run_mock.call_args.args[0])
+            self.assertIn("change Snakemake execution", result.output)
+            self.assertFalse((results / "scored" / "sample_score.tsv").exists())
+
+    def test_destructive_passthrough_warns_and_skips_postprocessing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(Path(tmpdir))
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args=--delete-temp-output",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("--delete-temp-output", run_mock.call_args.args[0])
+            self.assertIn("can remove workflow files", result.output)
+
+    def test_managed_and_dag_options_warn_but_are_forwarded(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(
+                Path(tmpdir),
+                with_workflow_output=True,
+            )
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args=--cores 8 --until score",
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            command = run_mock.call_args.args[0]
+            self.assertEqual(command[-4:], ["--cores", "8", "--until", "score"])
+            self.assertIn("overlap options managed by CADD-SV", result.output)
+            self.assertIn("change the selected DAG", result.output)
+
+    def test_rendered_command_quotes_passthrough_values_with_spaces(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = self.prepare_existing_dataset(Path(tmpdir))
+            with patch("caddsv.cli.subprocess.run"):
+                result = CliRunner().invoke(
+                    app,
+                    [
+                        "run",
+                        "sample",
+                        "--output-dir",
+                        str(results),
+                        "--no-use-conda",
+                        "--snakemake-args",
+                        '--report "reports/CADD SV.html"',
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertIn("'reports/CADD SV.html'", result.output)
+
     def test_no_use_conda_uses_parent_environment_without_creating_cache(self):
         runner = CliRunner()
 
