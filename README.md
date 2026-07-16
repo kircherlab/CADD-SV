@@ -91,8 +91,17 @@ Use `--conda-prefix` or `CADD_SV_CONDA_PREFIX` to place them on scratch or
 shared storage:
 
 ```bash
+caddsv get envs --use-conda \
+  --conda-prefix /scratch/$USER/caddsv-conda
+
 caddsv run sample.bed --conda-prefix /scratch/$USER/caddsv-conda
 ```
+
+The `get envs` command asks Snakemake to create all workflow Conda
+environments without requiring an input file or running workflow jobs. A later
+`caddsv run` reuses them when given the same prefix. Add
+`--coordinate-based-only` to omit the NT environment. Conda must be available
+on `PATH` while the environments are created.
 
 For a container or another pre-provisioned environment, disable Snakemake's
 per-rule conda environments:
@@ -130,10 +139,11 @@ caddsv run sample.bed \
 ```
 
 Images are cached in `${XDG_CACHE_HOME:-$HOME/.cache}/caddsv/snakemake-singularity`
-by default. `caddsv get envs` downloads all four images before execution, which
-avoids simultaneous first-time pulls when multiple runs start in parallel. For
-coordinate-only scoring, `--coordinate-based-only` omits the unused NT image.
-Existing images are reused unless `--force-envs` is supplied.
+by default. In its default image mode, `caddsv get envs` downloads all four
+images before execution, which avoids simultaneous first-time pulls when
+multiple runs start in parallel. For coordinate-only scoring,
+`--coordinate-based-only` omits the unused NT image. Existing images are reused
+unless `--force-envs` is supplied.
 
 Apptainer or Singularity must be installed on every execution host. The
 `--use-apptainer` and `--use-singularity` flags are equivalent; use the former
@@ -387,7 +397,8 @@ Print the version of the installed CADD-SV distribution.
 ```bash
 caddsv get annotations [--annotations-dir PATH] [--with-segmentnt] [--force-segmentnt]
 caddsv get segmentnt   [--annotations-dir PATH] [--force-segmentnt] [--segmentnt-repo REPO]
-caddsv get envs        [--apptainer-prefix PATH] [--coordinate-based-only] [--force-envs]
+caddsv get envs        [--use-conda] [--conda-prefix PATH] [--apptainer-prefix PATH]
+                       [--coordinate-based-only] [--force-envs]
 ```
 
 | Option | Meaning |
@@ -396,9 +407,11 @@ caddsv get envs        [--apptainer-prefix PATH] [--coordinate-based-only] [--fo
 | `--with-segmentnt` | Also download SegmentNT into `<annotations-dir>/segment_nt`. |
 | `--force-segmentnt` | Replace an existing local SegmentNT directory. |
 | `--segmentnt-repo REPO` | Hugging Face SegmentNT repository. Default: `InstaDeepAI/segment_nt`. |
+| `--use-conda` | Create the workflow Conda environments instead of downloading environment images. |
+| `--conda-prefix PATH` | Snakemake Conda environment directory; requires `--use-conda`. |
 | `--apptainer-prefix PATH` / `--singularity-prefix PATH` | Environment image directory; uses the same default and overrides as `caddsv run`. |
-| `--coordinate-based-only` | Prefetch preprocessing, SV, and training images without NT. |
-| `--force-envs` | Re-download environment images already present. |
+| `--coordinate-based-only` | Prefetch preprocessing, SV, and training environments without NT. |
+| `--force-envs` | Re-download environment images already present; image backend only. |
 
 ### `caddsv run`
 
@@ -438,7 +451,8 @@ can therefore override options such as `--cores`, `--config`, or the deployment
 backend; use this only when intentionally changing CADD-SV's default behavior.
 
 - First runs are slower because Snakemake creates or pulls software environments;
-  use `caddsv get envs` before parallel containerized runs.
+  prefetch with `caddsv get envs --use-conda` for Conda runs or
+  `caddsv get envs` for containerized runs.
 - In containerized runs, use `--no-use-conda` for a prebuilt parent environment
   or `--use-apptainer` for per-rule images.
 - Use the same `--output-dir` to resume or reuse work from an interrupted run.

@@ -54,6 +54,7 @@ PKG_DIR = Path(__file__).resolve().parent
 WORKFLOW_DIR = PKG_DIR / "workflow"
 MODELS_DIR = WORKFLOW_DIR / "models"
 DEFAULT_CONFIG = PKG_DIR / "config.yml"
+CONDA_ENVS_SNAKEFILE = WORKFLOW_DIR / "create_envs.smk"
 CONDA_PREFIX_ENV_VAR = "CADD_SV_CONDA_PREFIX"
 CONDA_CACHE_SUBDIR = Path("caddsv") / "snakemake-conda"
 SINGULARITY_PREFIX_ENV_VARS = (
@@ -367,6 +368,57 @@ def download_container_images(
     typer.echo(f"Environment images are available at: {target}")
 
 
+def build_conda_envs_command(
+    target: Path,
+    workdir: Path,
+    coordinate_based_only: bool = False,
+) -> List[str]:
+    workflow_target = (
+        "coordinate_based_envs" if coordinate_based_only else "all_envs"
+    )
+    return [
+        sys.executable,
+        "-m",
+        "snakemake",
+        "--snakefile",
+        str(CONDA_ENVS_SNAKEFILE),
+        "--directory",
+        str(workdir),
+        "--cores",
+        "1",
+        "--use-conda",
+        "--conda-prefix",
+        str(target),
+        "--conda-frontend",
+        "conda",
+        "--conda-create-envs-only",
+        workflow_target,
+    ]
+
+
+def create_conda_environments(
+    target: Path,
+    coordinate_based_only: bool = False,
+) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    typer.echo(f"Creating Conda environments in: {target}")
+
+    with tempfile.TemporaryDirectory(prefix="caddsv-conda-envs-") as workdir:
+        command = build_conda_envs_command(
+            target,
+            Path(workdir),
+            coordinate_based_only=coordinate_based_only,
+        )
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError as exc:
+            raise typer.BadParameter(
+                f"Failed to create Conda environments in {target}."
+            ) from exc
+
+    typer.echo(f"Conda environments are available at: {target}")
+
+
 def build_singularity_args(
     annot_dir: str,
     segmentnt_model_dir: str,
@@ -532,15 +584,28 @@ def get(
                 "(default: the CADD-SV Singularity/Apptainer cache)."
             ),
         ),
+        conda_prefix: Optional[Path] = typer.Option(
+            None,
+            "--conda-prefix",
+            help=(
+                "Directory for prefetched Snakemake Conda environments "
+                "(default: CADD_SV_CONDA_PREFIX or user cache)."
+            ),
+        ),
+        use_conda: bool = typer.Option(
+            False,
+            "--use-conda",
+            help="Create Conda environments instead of downloading images.",
+        ),
         coordinate_based_only: bool = typer.Option(
             False,
             "--coordinate-based-only",
-            help="Download preprocessing, SV, and training images, but not NT.",
+            help="Prepare preprocessing, SV, and training environments, but not NT.",
         ),
         force_envs: bool = typer.Option(
             False,
             "--force-envs",
-            help="Replace environment images already present in the cache.",
+            help="Replace environment images already present in the image cache.",
         ),
 ):
 
@@ -556,12 +621,34 @@ def get(
         download_segmentnt(target / SEGMENTNT_DIRNAME, segmentnt_repo, force_segmentnt)
         typer.echo("DONE")
     elif flag == "envs":
-        image_target = resolve_singularity_prefix(singularity_prefix)
-        download_container_images(
-            image_target,
-            coordinate_based_only=coordinate_based_only,
-            force=force_envs,
-        )
+        if use_conda:
+            if singularity_prefix is not None:
+                raise typer.BadParameter(
+                    "--singularity-prefix/--apptainer-prefix cannot be used "
+                    "with --use-conda."
+                )
+            if force_envs:
+                raise typer.BadParameter(
+                    "--force-envs only applies to environment images. Conda "
+                    "environments are recreated automatically when their YAML "
+                    "definitions change."
+                )
+            conda_target = resolve_conda_prefix(conda_prefix)
+            create_conda_environments(
+                conda_target,
+                coordinate_based_only=coordinate_based_only,
+            )
+        else:
+            if conda_prefix is not None:
+                raise typer.BadParameter(
+                    "--conda-prefix requires --use-conda."
+                )
+            image_target = resolve_singularity_prefix(singularity_prefix)
+            download_container_images(
+                image_target,
+                coordinate_based_only=coordinate_based_only,
+                force=force_envs,
+            )
         typer.echo("DONE")
     else:
         raise typer.BadParameter("Expected 'annotations', 'segmentnt', or 'envs'.")

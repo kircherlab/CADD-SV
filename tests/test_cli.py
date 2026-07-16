@@ -10,9 +10,11 @@ import typer
 from typer.testing import CliRunner
 
 from caddsv.cli import (
+    CONDA_ENVS_SNAKEFILE,
     DEFAULT_CONFIG,
     _build_snakemake_command,
     app,
+    build_conda_envs_command,
     container_image_path,
     parse_snakemake_args,
     write_final_score_file,
@@ -261,6 +263,148 @@ class GetEnvironmentImagesTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 2, result.output)
         self.assertIn("Downloading environment images requires Apptainer", result.output)
         self.assertIn("Singularity.", result.output)
+
+
+class GetCondaEnvironmentsTests(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+
+    def test_get_envs_creates_all_conda_environments_at_explicit_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "conda"
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "get",
+                        "envs",
+                        "--use-conda",
+                        "--conda-prefix",
+                        str(prefix),
+                    ],
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertTrue(prefix.is_dir())
+            run_mock.assert_called_once()
+            command = run_mock.call_args.args[0]
+            self.assertTrue(run_mock.call_args.kwargs["check"])
+            self.assertEqual(command[:3], [sys.executable, "-m", "snakemake"])
+            self.assertEqual(
+                command[command.index("--snakefile") + 1],
+                str(CONDA_ENVS_SNAKEFILE),
+            )
+            self.assertEqual(
+                command[command.index("--conda-prefix") + 1],
+                str(prefix.resolve()),
+            )
+            self.assertIn("--conda-create-envs-only", command)
+            self.assertEqual(command[-1], "all_envs")
+
+    def test_coordinate_based_conda_prefetch_uses_environment_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = Path(tmpdir) / "conda"
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--use-conda", "--coordinate-based-only"],
+                    env={"CADD_SV_CONDA_PREFIX": str(prefix)},
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            command = run_mock.call_args.args[0]
+            self.assertEqual(
+                command[command.index("--conda-prefix") + 1],
+                str(prefix.resolve()),
+            )
+            self.assertEqual(command[-1], "coordinate_based_envs")
+
+    def test_conda_prefetch_uses_default_cache_prefix(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_home = Path(tmpdir) / "cache"
+            with patch("caddsv.cli.subprocess.run") as run_mock:
+                result = self.runner.invoke(
+                    app,
+                    ["get", "envs", "--use-conda"],
+                    env={
+                        "CADD_SV_CONDA_PREFIX": "",
+                        "XDG_CACHE_HOME": str(cache_home),
+                    },
+                )
+
+            self.assertEqual(result.exit_code, 0, result.output)
+            command = run_mock.call_args.args[0]
+            expected = (cache_home / "caddsv" / "snakemake-conda").resolve()
+            self.assertEqual(
+                command[command.index("--conda-prefix") + 1],
+                str(expected),
+            )
+
+    def test_conda_and_image_options_cannot_be_combined(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.runner.invoke(
+                app,
+                [
+                    "get",
+                    "envs",
+                    "--use-conda",
+                    "--apptainer-prefix",
+                    tmpdir,
+                ],
+            )
+            self.assertEqual(result.exit_code, 2, result.output)
+            self.assertIn("cannot be used with", result.output)
+            self.assertIn("--use-conda", result.output)
+
+            result = self.runner.invoke(
+                app,
+                ["get", "envs", "--use-conda", "--force-envs"],
+            )
+            self.assertEqual(result.exit_code, 2, result.output)
+            self.assertIn("only applies to environment images", result.output)
+
+    def test_conda_prefix_requires_conda_backend(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self.runner.invoke(
+                app,
+                ["get", "envs", "--conda-prefix", tmpdir],
+            )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("--conda-prefix requires --use-conda", result.output)
+
+    def test_conda_creation_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            error = subprocess.CalledProcessError(1, ["snakemake"])
+            with patch("caddsv.cli.subprocess.run", side_effect=error):
+                result = self.runner.invoke(
+                    app,
+                    [
+                        "get",
+                        "envs",
+                        "--use-conda",
+                        "--conda-prefix",
+                        tmpdir,
+                    ],
+                )
+
+        self.assertEqual(result.exit_code, 2, result.output)
+        self.assertIn("Failed to create Conda environments", result.output)
+
+    def test_bootstrap_workflow_references_only_active_environment_files(self):
+        workflow = CONDA_ENVS_SNAKEFILE.read_text()
+        for filename in ("preprocessing.yml", "SV.yml", "NT.yml", "training.yml"):
+            self.assertIn(f'"envs/{filename}"', workflow)
+        self.assertNotIn("prepBED.yml", workflow)
+
+    def test_conda_command_builder_selects_requested_target(self):
+        command = build_conda_envs_command(
+            Path("/conda"),
+            Path("/work"),
+            coordinate_based_only=True,
+        )
+
+        self.assertEqual(command[-1], "coordinate_based_envs")
 
 
 class BuildSnakemakeCommandTests(unittest.TestCase):

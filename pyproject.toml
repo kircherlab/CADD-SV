@@ -44,6 +44,7 @@ include = ["caddsv*"]
 [tool.setuptools.package-data]
 caddsv = [
   "workflow/Snakefile",
+  "workflow/*.smk",
   "workflow/rules/*.smk",
   "workflow/envs/*.yml",
   "workflow/models/*.joblib",
