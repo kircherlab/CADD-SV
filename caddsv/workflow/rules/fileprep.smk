@@ -38,9 +38,10 @@ rule flanks:
         down="beds/{set}/{set}{format}_CBinput.beddown{flanksize}",
     shell:
         """
+        # Keep flank rows in CB input order; downstream matrices are combined by row.
         cat {input.CB} | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print $0}}' > {params.tmpup}
-        bedtools flank -i {params.tmpup} -g {input.genome} -l {params.flanksize} -r 0| awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print}}' | sort -k1,1 -k2,2n - > {output.up}
-        bedtools flank -i {input.CB} -g {input.genome} -r {params.flanksize} -l 0 | sort -k1,1 -k2,2n - > {output.down}
+        bedtools flank -i {params.tmpup} -g {input.genome} -l {params.flanksize} -r 0 | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1 ; print}}' > {output.up}
+        bedtools flank -i {input.CB} -g {input.genome} -r {params.flanksize} -l 0 > {output.down}
         
         """
 if config["sequence_model"]:
