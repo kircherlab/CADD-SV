@@ -9,7 +9,7 @@ rule prep_chr1:
         "beds/{set}/{set}{format}_wchr.{bedflanks}",
     shell:
         """
-        # Annotation inputs must retain CB input order.
+        # Annotation inputs must retain the order recorded for their flank rows.
         cut -f1,2,3 {input} > {output}
         """
 
