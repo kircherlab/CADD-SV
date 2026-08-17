@@ -622,6 +622,8 @@ if config["sequence_model"]:
             SB="beds/{set}/{set}{format}_DBfeatures.bed",
             SBref="beds/{set}/{set}{format}_SBreffeatures.bed",
             SBtrue="beds/{set}/{set}{format}_SBfeatures.bed",
+            up_order="beds/{set}/{set}{format}_CBinput_up_order{flanksize}.txt",
+            down_order="beds/{set}/{set}{format}_CBinput_down_order{flanksize}.txt",
             genome=ANNOT_DIR + "/ucsc/hg38.fa.sorted.genome",
             
         output:
@@ -636,7 +638,7 @@ if config["sequence_model"]:
             """
             touch {input.SBtrue}
             touch {input.SBref}
-            python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {output.CB} 
+            python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {input.up_order} {input.down_order} {output.CB}
             paste {output.CB} <(cut -f5- {input.SB}) > {output.SB}
             """
 
@@ -716,6 +718,8 @@ else:
             matrix="beds/{set}/{set}{format}_matrix.bed",
             up="beds/{set}/{set}{format}_matrix.bedup{flanksize}",
             down="beds/{set}/{set}{format}_matrix.beddown{flanksize}",
+            up_order="beds/{set}/{set}{format}_CBinput_up_order{flanksize}.txt",
+            down_order="beds/{set}/{set}{format}_CBinput_down_order{flanksize}.txt",
             genome=ANNOT_DIR + "/ucsc/hg38.fa.sorted.genome",
             
         output:
@@ -727,7 +731,7 @@ else:
             container_for("sv")
         shell:
             """
-            python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {output.CB} 
+            python {workflow.basedir}/scripts/CB_final.py {input.matrix} {input.up} {input.down} {input.genome} {input.up_order} {input.down_order} {output.CB}
             """
 
     if config.get("mode", "training") == "training":

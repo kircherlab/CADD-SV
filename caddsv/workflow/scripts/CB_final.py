@@ -3,6 +3,8 @@ import numpy as np
 import os
 import sys
 
+from row_order import read_inverse_permutation
+
 # Function definition for scoring
 
 
@@ -50,7 +52,7 @@ def cadd_sv_read(file):
     
     return y
 
-def cadd_sv(matrix, up, down, genome):
+def cadd_sv(matrix, up, down, genome, up_order, down_order):
     k = []
     y = []
 
@@ -58,8 +60,21 @@ def cadd_sv(matrix, up, down, genome):
     genome.iloc[:, 0] = genome.iloc[:, 0].replace(to_replace='[chr\n]', value='', regex=True)  # added for ranges towards the end of chromosome
     
     k.append(cadd_sv_read(matrix))
-    k.append(cadd_sv_read(up))
-    k.append(cadd_sv_read(down))
+    up_data = cadd_sv_read(up)
+    down_data = cadd_sv_read(down)
+
+    if len(up_data) != len(k[0]) or len(down_data) != len(k[0]):
+        raise ValueError(
+            "Whole-variant, upstream, and downstream matrices have different row counts."
+        )
+
+    up_inverse = read_inverse_permutation(up_order, len(up_data))
+    down_inverse = read_inverse_permutation(down_order, len(down_data))
+    up_data.iloc[:, 3:] = up_data.iloc[up_inverse, 3:].to_numpy()
+    down_data.iloc[:, 3:] = down_data.iloc[down_inverse, 3:].to_numpy()
+
+    k.append(up_data)
+    k.append(down_data)
 
     k.append(k[1] + k[2])
     # Apply minimum for distance columns (values should not be summed across flanks)
@@ -79,6 +94,13 @@ def cadd_sv(matrix, up, down, genome):
     return y
     
 
-CB = cadd_sv(matrix=sys.argv[1], up=sys.argv[2], down=sys.argv[3], genome=sys.argv[4])
+CB = cadd_sv(
+    matrix=sys.argv[1],
+    up=sys.argv[2],
+    down=sys.argv[3],
+    genome=sys.argv[4],
+    up_order=sys.argv[5],
+    down_order=sys.argv[6],
+)
 
-CB[2].to_csv(sys.argv[5], sep="\t", index=False)
+CB[2].to_csv(sys.argv[7], sep="\t", index=False)
