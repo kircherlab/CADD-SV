@@ -9,7 +9,8 @@ rule prep_chr1:
         "beds/{set}/{set}{format}_wchr.{bedflanks}",
     shell:
         """
-        cut -f1,2,3 {input} | sort -k1,1 -k2,2n > {output}
+        # Annotation inputs must retain the order recorded for their flank rows.
+        cut -f1,2,3 {input} > {output}
         """
 
 
@@ -41,7 +42,7 @@ rule prep_merg1:
         wchr="beds/{set}/{set}{format}_merged.{bedflanks}",
     shell:
         """
-        bedops --merge {input.nochr} > {output.nochr}
-        bedops --merge {input.wchr} > {output.wchr}
+        sort-bed {input.nochr} | bedops --merge - > {output.nochr}
+        sort-bed {input.wchr} | bedops --merge - > {output.wchr}
 
         """
