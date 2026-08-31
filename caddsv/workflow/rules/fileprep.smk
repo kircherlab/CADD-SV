@@ -44,7 +44,7 @@ rule flanks:
     shell:
         """
         awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1; print $0, NR-1}}' {input.CB} > {params.tmpup_input}
-        bedtools flank -i {params.tmpup_input} -g {input.genome} -l {params.flanksize} -r 0 | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1; print}}' | sort -k1,1 -k2,2n -k3,3n -k5,5n - > {params.tmpup_sorted}
+        bedtools flank -i {params.tmpup_input} -g {input.genome} -l {params.flanksize} -r 0 | sort -k1,1 -k2,2n -k3,3n -k5,5n - > {params.tmpup_sorted}
         cut -f1-4 {params.tmpup_sorted} > {output.up}
         cut -f5 {params.tmpup_sorted} > {output.up_order}
 
