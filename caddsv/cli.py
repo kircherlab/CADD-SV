@@ -25,16 +25,18 @@ from caddsv.container_images import (
 app = typer.Typer(add_completion=False, help="CADD-SV Snakemake-based scoring tool")
 
 
+def _installed_version() -> str:
+    try:
+        return package_version("caddsv")
+    except PackageNotFoundError:
+        return "unknown (package metadata unavailable)"
+
+
 def _version_callback(value: bool) -> None:
     if not value:
         return
 
-    try:
-        installed_version = package_version("caddsv")
-    except PackageNotFoundError:
-        installed_version = "unknown (package metadata unavailable)"
-
-    typer.echo(installed_version)
+    typer.echo(_installed_version())
     raise typer.Exit()
 
 
@@ -197,6 +199,10 @@ def write_final_score_file(source: Path, destination: Path) -> None:
         ]
 
         with destination.open("w", encoding="utf-8", newline="\n") as output_file:
+            if header[0] == "#chr":
+                output_file.write(
+                    f"##CADD-SV v{_installed_version()} (GRCh38 coordinates)\n"
+                )
             output_file.write("\t".join(header) + "\n")
             for line in input_file:
                 fields = line.rstrip("\r\n").split("\t")

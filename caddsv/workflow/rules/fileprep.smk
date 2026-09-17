@@ -43,13 +43,13 @@ rule flanks:
         down_order=temp("beds/{set}/{set}{format}_CBinput_down_order{flanksize}.txt"),
     shell:
         """
-        awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1; print $0, NR-1}}' {input.CB} > {params.tmpup_input}
-        bedtools flank -i {params.tmpup_input} -g {input.genome} -l {params.flanksize} -r 0 | awk 'BEGIN{{OFS = "\t"}}{{if ($2 == 0) $2+=1; print}}' | sort -k1,1 -k2,2n -k3,3n -k5,5n - > {params.tmpup_sorted}
+        awk 'BEGIN{{OFS = "\t"}}{{print $0, NR-1}}' {input.CB} > {params.tmpup_input}
+        bedtools flank -i {params.tmpup_input} -g {input.genome} -l {params.flanksize} -r 0 | awk 'BEGIN{{OFS = "\t"}}{{if ($3 <= $2) $3=$2+1; if ($2 == 0) {{$2=1; $3+=1}}; print}}' | sort -k1,1 -k2,2n -k3,3n -k5,5n - > {params.tmpup_sorted}
         cut -f1-4 {params.tmpup_sorted} > {output.up}
         cut -f5 {params.tmpup_sorted} > {output.up_order}
 
         awk 'BEGIN{{OFS = "\t"}}{{print $0, NR-1}}' {input.CB} > {params.tmpdown_input}
-        bedtools flank -i {params.tmpdown_input} -g {input.genome} -r {params.flanksize} -l 0 | sort -k1,1 -k2,2n -k3,3n -k5,5n - > {params.tmpdown_sorted}
+        bedtools flank -i {params.tmpdown_input} -g {input.genome} -r {params.flanksize} -l 0 | awk 'BEGIN{{OFS = "\t"}}{{if ($3 <= $2) $2=$3-1; if ($2 >= 0 && $3 > $2) print}}' | sort -k1,1 -k2,2n -k3,3n -k5,5n - > {params.tmpdown_sorted}
         cut -f1-4 {params.tmpdown_sorted} > {output.down}
         cut -f5 {params.tmpdown_sorted} > {output.down_order}
 
