@@ -53,6 +53,7 @@ class FinalScoreFileTests(unittest.TestCase):
             self.assertEqual(
                 destination.read_text(),
                 (
+                    f"##CADD-SV v{package_version('caddsv')} (GRCh38 coordinates)\n"
                     "#chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score"
                     "\tCADD-SV-SR_score\tfeature\n"
                     "chr1\t1\t2\tDEL\t12.345678\t0.1235\t0.5001\t9.876543\n"
@@ -727,6 +728,7 @@ class RunCommandTests(unittest.TestCase):
             self.assertEqual(source.read_text(), source_contents)
             self.assertEqual(
                 (results / "scored" / "sample_score.tsv").read_text(),
+                f"##CADD-SV v{package_version('caddsv')} (GRCh38 coordinates)\n"
                 "#chr\tstart\tend\ttype\tCADD-SV_PHRED\tCADD-SV_score\n"
                 "chr1\t1\t2\tDEL\t12.345678\t0.1235\n",
             )
